@@ -1,0 +1,37 @@
+{
+  "name": "shawarma-wasi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mozo, cocina y administración para Shawarma Wasi",
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c magenta,cyan \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=frontend && npm run build --workspace=backend",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run db:migrate --workspace=backend",
+    "db:deploy": "npm run db:deploy --workspace=backend",
+    "db:seed": "npm run db:seed --workspace=backend",
+    "db:demo": "npm run db:demo --workspace=backend",
+    "db:reset": "npm run db:reset --workspace=backend",
+    "db:studio": "npm run db:studio --workspace=backend",
+    "start": "npm run start --workspace=backend",
+    "test": "npm run test --workspace=backend",
+    "test:e2e": "node e2e/correr.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

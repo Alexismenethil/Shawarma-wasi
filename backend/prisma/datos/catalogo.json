@@ -1,0 +1,1833 @@
+{
+ "productos": [
+  {
+   "codigo": "ST",
+   "familia": "Shawarma",
+   "variante": "Clásica",
+   "nombre": "Shawarma Clásica",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "SH",
+   "familia": "Shawarma",
+   "variante": "Huamanguina",
+   "nombre": "Shawarma Huamanguina",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "SN",
+   "familia": "Shawarma",
+   "variante": "Napolitana",
+   "nombre": "Shawarma Napolitana",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "SW",
+   "familia": "Shawarma",
+   "variante": "Hawaiana",
+   "nombre": "Shawarma Hawaiana",
+   "precio": 2200,
+   "descripcion": null
+  },
+  {
+   "codigo": "SS",
+   "familia": "Shawarma",
+   "variante": "Suprema",
+   "nombre": "Shawarma Suprema",
+   "precio": 2200,
+   "descripcion": null
+  },
+  {
+   "codigo": "SC",
+   "familia": "Shawarma",
+   "variante": "Criolla",
+   "nombre": "Shawarma Criolla",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "SP",
+   "familia": "Shawarma",
+   "variante": "Charapita",
+   "nombre": "Shawarma Charapita",
+   "precio": 2500,
+   "descripcion": null
+  },
+  {
+   "codigo": "SM",
+   "familia": "Shawarma",
+   "variante": "Mixta",
+   "nombre": "Shawarma Carne y Pollo",
+   "precio": 2000,
+   "descripcion": "Carne y pollo"
+  },
+  {
+   "codigo": "SA",
+   "familia": "Shawarma",
+   "variante": "Acevichada",
+   "nombre": "Shawarma Acevichada",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "SR",
+   "familia": "Shawarma",
+   "variante": "Crispy",
+   "nombre": "Shawarma Crispy",
+   "precio": 2500,
+   "descripcion": null
+  },
+  {
+   "codigo": "AC",
+   "familia": "Artesanal-Carne",
+   "variante": "Clásica",
+   "nombre": "Artesanal Clásica de carne",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "AM",
+   "familia": "Artesanal-Carne",
+   "variante": "Montada",
+   "nombre": "Artesanal Montada de carne",
+   "precio": 1200,
+   "descripcion": "Con huevo"
+  },
+  {
+   "codigo": "AN",
+   "familia": "Artesanal-Carne",
+   "variante": "Napolitana",
+   "nombre": "Artesanal Napolitana de carne",
+   "precio": 1200,
+   "descripcion": "Con queso"
+  },
+  {
+   "codigo": "AA",
+   "familia": "Artesanal-Carne",
+   "variante": "A lo Pobre",
+   "nombre": "Artesanal A lo Pobre de carne",
+   "precio": 1400,
+   "descripcion": "Con huevo y plátano"
+  },
+  {
+   "codigo": "AH",
+   "familia": "Artesanal-Carne",
+   "variante": "Hawaiana",
+   "nombre": "Artesanal Hawaiana de carne",
+   "precio": 1600,
+   "descripcion": "Con queso, jamón y plátano"
+  },
+  {
+   "codigo": "AR",
+   "familia": "Artesanal-Carne",
+   "variante": "Royal",
+   "nombre": "Artesanal Royal de carne",
+   "precio": 1800,
+   "descripcion": "Con huevo, jamón y queso"
+  },
+  {
+   "codigo": "AE",
+   "familia": "Artesanal-Carne",
+   "variante": "Especial",
+   "nombre": "Artesanal Especial de carne",
+   "precio": 2000,
+   "descripcion": "Con huevo, jamón, queso, tocino, chorizo y plátano"
+  },
+  {
+   "codigo": "AP",
+   "familia": "Artesanal-Pollo",
+   "variante": "Clásica",
+   "nombre": "Artesanal Clásica de pollo",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "AB",
+   "familia": "Artesanal-Pollo",
+   "variante": "Crispy",
+   "nombre": "Artesanal Crispy de pollo",
+   "precio": 1200,
+   "descripcion": "Pollo broaster"
+  },
+  {
+   "codigo": "AM",
+   "familia": "Artesanal-Pollo",
+   "variante": "Montada",
+   "nombre": "Artesanal Montada de pollo",
+   "precio": 1200,
+   "descripcion": "Con huevo"
+  },
+  {
+   "codigo": "AN",
+   "familia": "Artesanal-Pollo",
+   "variante": "Napolitana",
+   "nombre": "Artesanal Napolitana de pollo",
+   "precio": 1200,
+   "descripcion": "Con queso"
+  },
+  {
+   "codigo": "AA",
+   "familia": "Artesanal-Pollo",
+   "variante": "A lo Pobre",
+   "nombre": "Artesanal A lo Pobre de pollo",
+   "precio": 1400,
+   "descripcion": "Con huevo y plátano"
+  },
+  {
+   "codigo": "AH",
+   "familia": "Artesanal-Pollo",
+   "variante": "Hawaiana",
+   "nombre": "Artesanal Hawaiana de pollo",
+   "precio": 1600,
+   "descripcion": "Con queso, jamón y piña"
+  },
+  {
+   "codigo": "AR",
+   "familia": "Artesanal-Pollo",
+   "variante": "Royal",
+   "nombre": "Artesanal Royal de pollo",
+   "precio": 1800,
+   "descripcion": "Con huevo, jamón y queso"
+  },
+  {
+   "codigo": "AE",
+   "familia": "Artesanal-Pollo",
+   "variante": "Especial",
+   "nombre": "Artesanal Especial de pollo",
+   "precio": 2000,
+   "descripcion": "Con huevo, jamón, queso, tocino, chorizo y plátano"
+  },
+  {
+   "codigo": "HC",
+   "familia": "Burger",
+   "variante": "Clásica",
+   "nombre": "Hamburguesa Clásica",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "HD",
+   "familia": "Burger",
+   "variante": "Doble",
+   "nombre": "Hamburguesa Doble",
+   "precio": 1000,
+   "descripcion": "Con huevo"
+  },
+  {
+   "codigo": "HT",
+   "familia": "Burger",
+   "variante": "Triple",
+   "nombre": "Hamburguesa Triple",
+   "precio": 1200,
+   "descripcion": "Con huevo y hot dog"
+  },
+  {
+   "codigo": "HD",
+   "familia": "Burger",
+   "variante": "Hot Dog",
+   "nombre": "Hot Dog",
+   "precio": 600,
+   "descripcion": "Con queso"
+  },
+  {
+   "codigo": "CH",
+   "familia": "Burger",
+   "variante": "Choripán",
+   "nombre": "Choripán",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "CG",
+   "familia": "Caldo",
+   "variante": "Gallina",
+   "nombre": "Caldo de Gallina",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "CA",
+   "familia": "Caldo",
+   "variante": "Acevichado",
+   "nombre": "Caldo Acevichado",
+   "precio": 1700,
+   "descripcion": null
+  },
+  {
+   "codigo": "CS",
+   "familia": "Caldo",
+   "variante": "Gallina sin Presa",
+   "nombre": "Caldo de Gallina sin Presa",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "HC",
+   "familia": "Caldo",
+   "variante": "Huallpa Chupe",
+   "nombre": "Huallpa Chupe",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "CU",
+   "familia": "Caldo",
+   "variante": "Cuy",
+   "nombre": "Caldo de Cuy",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CC",
+   "familia": "Caldo",
+   "variante": "Cuy sin Presa",
+   "nombre": "Caldo de Cuy sin Presa",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "TA",
+   "familia": "Taco",
+   "variante": "Taco",
+   "nombre": "Taco",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "RA",
+   "familia": "Asado",
+   "variante": "Rachi Clásico",
+   "nombre": "Rachi Clásico",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "RC",
+   "familia": "Asado",
+   "variante": "Rachi Mixto",
+   "nombre": "Rachi con Anticuchos",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "BC",
+   "familia": "Asado",
+   "variante": "Anticucho Clásico",
+   "nombre": "Anticucho Clásico",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "BK",
+   "familia": "Asado",
+   "variante": "Súper Anticucho",
+   "nombre": "Súper Anticucho",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "BR",
+   "familia": "Asado",
+   "variante": "Brochetas de Pollo",
+   "nombre": "Brochetas de Pollo",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "PP",
+   "familia": "Asado",
+   "variante": "Brocheta Mixta",
+   "nombre": "Brochetas de Pollo y Anticucho",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "PP",
+   "familia": "Parrilla",
+   "variante": "Parrilla de Pollo",
+   "nombre": "Parrilla de Pollo",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "PC",
+   "familia": "Parrilla",
+   "variante": "Parrilla de Carne",
+   "nombre": "Parrilla de Carne",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "PH",
+   "familia": "Parrilla",
+   "variante": "Parrilla de Chancho",
+   "nombre": "Parrilla de Chancho",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "PM",
+   "familia": "Parrilla",
+   "variante": "Parrilla Mixta",
+   "nombre": "Parrilla Mixta",
+   "precio": 3000,
+   "descripcion": null
+  },
+  {
+   "codigo": "BI",
+   "familia": "Parrilla",
+   "variante": "Bistec",
+   "nombre": "Bistec",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "AT",
+   "familia": "Parrilla",
+   "variante": "Bistec a lo Pobre",
+   "nombre": "Bistec a lo Pobre",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CU",
+   "familia": "Parrilla",
+   "variante": "Churrasco",
+   "nombre": "Churrasco",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "CA",
+   "familia": "Parrilla",
+   "variante": "Churrasco a lo Pobre",
+   "nombre": "Churrasco a lo Pobre",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "AC",
+   "familia": "Chifa",
+   "variante": "Arroz Chaufa",
+   "nombre": "Arroz Chaufa",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "AE",
+   "familia": "Chifa",
+   "variante": "Aeropuerto",
+   "nombre": "Aeropuerto",
+   "precio": 1800,
+   "descripcion": null
+  },
+  {
+   "codigo": "AP",
+   "familia": "Chifa",
+   "variante": "Combinado de Pollo",
+   "nombre": "Combinado de Pollo",
+   "precio": 1800,
+   "descripcion": null
+  },
+  {
+   "codigo": "TS",
+   "familia": "Chifa",
+   "variante": "Tallarín Saltado",
+   "nombre": "Tallarín Saltado",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "WF",
+   "familia": "Chifa",
+   "variante": "Wantan Frito",
+   "nombre": "Wantan Frito",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "PB",
+   "familia": "Chifa",
+   "variante": "Pollo Broaster",
+   "nombre": "Pollo Broaster",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "MO",
+   "familia": "Chifa",
+   "variante": "Mostrito",
+   "nombre": "Mostrito",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "PP",
+   "familia": "PlatoFondo",
+   "variante": "Pollo a la Plancha",
+   "nombre": "Pollo a la Plancha",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "AC",
+   "familia": "PlatoFondo",
+   "variante": "Arroz a la Cubana",
+   "nombre": "Arroz a la Cubana",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "AH",
+   "familia": "PlatoFondo",
+   "variante": "Arroz con Huevo",
+   "nombre": "Arroz con Huevo",
+   "precio": 1200,
+   "descripcion": null
+  },
+  {
+   "codigo": "CH",
+   "familia": "PlatoFondo",
+   "variante": "Chorizo Huamanguino",
+   "nombre": "Chorizo Huamanguino",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CB",
+   "familia": "Conito",
+   "variante": "Alita a la BBQ",
+   "nombre": "Conito con Alita a la BBQ",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CA",
+   "familia": "Conito",
+   "variante": "Alita Acevichada",
+   "nombre": "Conito con Alita Acevichada",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CC",
+   "familia": "Conito",
+   "variante": "Lomo",
+   "nombre": "Conito con Lomo",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CP",
+   "familia": "Conito",
+   "variante": "Charapita",
+   "nombre": "Conito Charapita",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CM",
+   "familia": "Conito",
+   "variante": "Huamanguina",
+   "nombre": "Conito Huamanguina",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CS",
+   "familia": "Conito",
+   "variante": "Salchipapa",
+   "nombre": "Conito con Salchipapa",
+   "precio": 1200,
+   "descripcion": null
+  },
+  {
+   "codigo": "CR",
+   "familia": "Conito",
+   "variante": "Salchipapa a lo Pobre",
+   "nombre": "Conito con Salchipapa a lo Pobre",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "CR",
+   "familia": "Conito",
+   "variante": "Salchipollo",
+   "nombre": "Conito con Salchipapa y Pollo Nuget",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "CR",
+   "familia": "Conito",
+   "variante": "Crispy (Broaster)",
+   "nombre": "Conito con Crispy (Broaster)",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "EC",
+   "familia": "Pizza",
+   "variante": "Hawaiana",
+   "nombre": "Pizza Hawaiana",
+   "precio": 2100,
+   "descripcion": null
+  },
+  {
+   "codigo": "EE",
+   "familia": "Pizza",
+   "variante": "Hawaiana Fam",
+   "nombre": "Pizza Hawaiana Fam",
+   "precio": 4200,
+   "descripcion": null
+  },
+  {
+   "codigo": "EM",
+   "familia": "Pizza",
+   "variante": "Hawaiana Chicken",
+   "nombre": "Pizza Hawaiana Chicken",
+   "precio": 2300,
+   "descripcion": null
+  },
+  {
+   "codigo": "EF",
+   "familia": "Pizza",
+   "variante": "Hawaiana Chicken Fam",
+   "nombre": "Pizza Hawaiana Chicken Fam",
+   "precio": 4500,
+   "descripcion": null
+  },
+  {
+   "codigo": "RF",
+   "familia": "Pizza",
+   "variante": "Americana",
+   "nombre": "Pizza Americana",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "RJ",
+   "familia": "Pizza",
+   "variante": "Americana Fam",
+   "nombre": "Pizza Americana Fam",
+   "precio": 4000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CM",
+   "familia": "Pizza",
+   "variante": "Peperoni",
+   "nombre": "Pizza Peperoni",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "LI",
+   "familia": "Pizza",
+   "variante": "Peperoni Fam",
+   "nombre": "Pizza Peperoni Fam",
+   "precio": 4000,
+   "descripcion": null
+  },
+  {
+   "codigo": "A1",
+   "familia": "Pizza",
+   "variante": "Charapita",
+   "nombre": "Pizza Charapita",
+   "precio": 2500,
+   "descripcion": null
+  },
+  {
+   "codigo": "LF",
+   "familia": "Pizza",
+   "variante": "Charapita Fam",
+   "nombre": "Pizza Charapita Fam",
+   "precio": 5000,
+   "descripcion": null
+  },
+  {
+   "codigo": "L1",
+   "familia": "Pizza",
+   "variante": "De la Casa",
+   "nombre": "Pizza De la Casa",
+   "precio": 2500,
+   "descripcion": null
+  },
+  {
+   "codigo": "LM",
+   "familia": "Pizza",
+   "variante": "De la Casa Fam",
+   "nombre": "Pizza De la Casa Fam",
+   "precio": 5000,
+   "descripcion": null
+  },
+  {
+   "codigo": "M1",
+   "familia": "Pizza",
+   "variante": "Vegetariana",
+   "nombre": "Pizza Vegetariana",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "NM",
+   "familia": "Pizza",
+   "variante": "Vegetariana Fam",
+   "nombre": "Pizza Vegetariana Fam",
+   "precio": 4000,
+   "descripcion": null
+  },
+  {
+   "codigo": "NF",
+   "familia": "Pizza",
+   "variante": "Caprese",
+   "nombre": "Pizza Caprese",
+   "precio": 1900,
+   "descripcion": null
+  },
+  {
+   "codigo": "R1",
+   "familia": "Pizza",
+   "variante": "Caprese Fam",
+   "nombre": "Pizza Caprese Fam",
+   "precio": 3800,
+   "descripcion": null
+  },
+  {
+   "codigo": "R1",
+   "familia": "Pan al Ajo",
+   "variante": "Tradicional",
+   "nombre": "Pan al Ajo Tradicional",
+   "precio": 400,
+   "descripcion": null
+  },
+  {
+   "codigo": "MM",
+   "familia": "Pan al Ajo",
+   "variante": "Especial",
+   "nombre": "Pan al Ajo Especial",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "MM",
+   "familia": "Pastas",
+   "variante": "Lasagna",
+   "nombre": "Pastas Lasagna",
+   "precio": 2500,
+   "descripcion": null
+  },
+  {
+   "codigo": "CP",
+   "familia": "Pastas",
+   "variante": "A la Carbonara",
+   "nombre": "Pastas A la Carbonara",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CO",
+   "familia": "Pastas",
+   "variante": "A la Bolognesa",
+   "nombre": "Pastas A la Bolognesa",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "MF",
+   "familia": "Pastas",
+   "variante": "Al Alfredo",
+   "nombre": "Pastas Al Alfredo",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CO",
+   "familia": "Pastas",
+   "variante": "Al Pesto",
+   "nombre": "Pastas Al Pesto",
+   "precio": 2200,
+   "descripcion": null
+  },
+  {
+   "codigo": "CO",
+   "familia": "Pastas",
+   "variante": "A la Huancaína",
+   "nombre": "Pastas A la Huancaína",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "EC",
+   "familia": "Emoliente",
+   "variante": "Clásico",
+   "nombre": "Emoliente Clásico",
+   "precio": 400,
+   "descripcion": null
+  },
+  {
+   "codigo": "EE",
+   "familia": "Emoliente",
+   "variante": "Especial",
+   "nombre": "Emoliente Especial",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "EM",
+   "familia": "Emoliente",
+   "variante": "Con Maracuyá",
+   "nombre": "Emoliente con Maracuyá",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "EF",
+   "familia": "Emoliente",
+   "variante": "Con Fresa",
+   "nombre": "Emoliente con Fresa",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "ET",
+   "familia": "Emoliente",
+   "variante": "Con Menta",
+   "nombre": "Emoliente con Menta",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "EG",
+   "familia": "Emoliente",
+   "variante": "Con Mango",
+   "nombre": "Emoliente con Mango",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "RF",
+   "familia": "Refresco",
+   "variante": "Cebada",
+   "nombre": "Refresco de Cebada",
+   "precio": 400,
+   "descripcion": null
+  },
+  {
+   "codigo": "RJ",
+   "familia": "Refresco",
+   "variante": "Concentrado de Jamaica",
+   "nombre": "Concentrado de Jamaica",
+   "precio": 500,
+   "descripcion": null
+  },
+  {
+   "codigo": "CM",
+   "familia": "Refresco",
+   "variante": "Chicha Morada",
+   "nombre": "Chicha Morada",
+   "precio": 500,
+   "descripcion": null
+  },
+  {
+   "codigo": "LI",
+   "familia": "Refresco",
+   "variante": "Limonada Americana",
+   "nombre": "Limonada Americana",
+   "precio": 500,
+   "descripcion": null
+  },
+  {
+   "codigo": "A1",
+   "familia": "Refresco",
+   "variante": "Limonada Americana Lt",
+   "nombre": "Limonada Americana Lt",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "LF",
+   "familia": "Refresco",
+   "variante": "Limonada Frozen",
+   "nombre": "Limonada Frozen",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "L1",
+   "familia": "Refresco",
+   "variante": "Limonada Frozen Lt",
+   "nombre": "Limonada Frozen Lt",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "LM",
+   "familia": "Refresco",
+   "variante": "Maracuyá Frozen",
+   "nombre": "Maracuyá Frozen",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "M1",
+   "familia": "Refresco",
+   "variante": "Maracuyá Frozen Lt",
+   "nombre": "Maracuyá Frozen Lt",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "NM",
+   "familia": "Refresco",
+   "variante": "Maracuyá",
+   "nombre": "Néctar de Maracuyá",
+   "precio": 500,
+   "descripcion": null
+  },
+  {
+   "codigo": "NF",
+   "familia": "Refresco",
+   "variante": "Fresa",
+   "nombre": "Néctar de Fresa",
+   "precio": 500,
+   "descripcion": null
+  },
+  {
+   "codigo": "R1",
+   "familia": "Refresco",
+   "variante": "Jamaica",
+   "nombre": "Refresco de Jamaica",
+   "precio": 500,
+   "descripcion": null
+  },
+  {
+   "codigo": "R1",
+   "familia": "Refresco",
+   "variante": "Jamaica Lt",
+   "nombre": "Concentrado de Jamaica Lt",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "MM",
+   "familia": "Cremolada",
+   "variante": "Maracumango",
+   "nombre": "Maracumango",
+   "precio": 700,
+   "descripcion": null
+  },
+  {
+   "codigo": "MM",
+   "familia": "Cremolada",
+   "variante": "Maracumango Lt",
+   "nombre": "Maracumango Lt",
+   "precio": 1400,
+   "descripcion": null
+  },
+  {
+   "codigo": "CP",
+   "familia": "Café-Chocolate",
+   "variante": "Café Pasado",
+   "nombre": "Café Pasado",
+   "precio": 500,
+   "descripcion": null
+  },
+  {
+   "codigo": "CO",
+   "familia": "Café-Chocolate",
+   "variante": "Café con Leche",
+   "nombre": "Café con Leche",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "MF",
+   "familia": "Café-Chocolate",
+   "variante": "Capuchino",
+   "nombre": "Capuchino",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CO",
+   "familia": "Café-Chocolate",
+   "variante": "Chocolate",
+   "nombre": "Chocolate",
+   "precio": 500,
+   "descripcion": null
+  },
+  {
+   "codigo": "CO",
+   "familia": "Café-Chocolate",
+   "variante": "Chocolate con Leche",
+   "nombre": "Chocolate con Leche",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "MF",
+   "familia": "Mate",
+   "variante": "Filtrante",
+   "nombre": "Mate Filtrante",
+   "precio": 400,
+   "descripcion": null
+  },
+  {
+   "codigo": "MN",
+   "familia": "Mate",
+   "variante": "Natural",
+   "nombre": "Mate Natural",
+   "precio": 500,
+   "descripcion": null
+  },
+  {
+   "codigo": "CC",
+   "familia": "Calientito",
+   "variante": "De la Casa",
+   "nombre": "Calientito de la Casa",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CM",
+   "familia": "Calientito",
+   "variante": "De la Casa Maracuyá Lt",
+   "nombre": "Calientito de la Casa Maracuyá Jarra",
+   "precio": 3000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CJ",
+   "familia": "Calientito",
+   "variante": "De la Casa Jamaica Lt",
+   "nombre": "Calientito de la Casa Jamaica Jarra",
+   "precio": 3000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CT",
+   "familia": "Calientito",
+   "variante": "De la Casa Menta Lt",
+   "nombre": "Calientito de la Casa Menta Jarra",
+   "precio": 3000,
+   "descripcion": null
+  },
+  {
+   "codigo": "CE",
+   "familia": "Calientito",
+   "variante": "De la Casa Emoliente Lt",
+   "nombre": "Calientito de la Casa Emoliente Jarra",
+   "precio": 3000,
+   "descripcion": null
+  },
+  {
+   "codigo": "GP",
+   "familia": "Gaseosa",
+   "variante": "Personal",
+   "nombre": "Gaseosa Personal",
+   "precio": 400,
+   "descripcion": null
+  },
+  {
+   "codigo": "GG",
+   "familia": "Gaseosa",
+   "variante": "Gordita",
+   "nombre": "Gaseosa Gordita",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "GL",
+   "familia": "Gaseosa",
+   "variante": "Litro",
+   "nombre": "Gaseosa Litro",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "GM",
+   "familia": "Gaseosa",
+   "variante": "Litro y Medio",
+   "nombre": "Gaseosa Litro y Medio",
+   "precio": 1200,
+   "descripcion": null
+  },
+  {
+   "codigo": "FT",
+   "familia": "Gaseosa",
+   "variante": "Té Verde Limón",
+   "nombre": "Té Verde Limón",
+   "precio": 400,
+   "descripcion": null
+  },
+  {
+   "codigo": "AM",
+   "familia": "Gaseosa",
+   "variante": "Agua Mineral",
+   "nombre": "Agua Mineral",
+   "precio": 300,
+   "descripcion": null
+  },
+  {
+   "codigo": "AM",
+   "familia": "Gaseosa",
+   "variante": "Cerveza",
+   "nombre": "Cerveza",
+   "precio": 700,
+   "descripcion": null
+  },
+  {
+   "codigo": "JV",
+   "familia": "Jugo",
+   "variante": "Verde",
+   "nombre": "Jugo Verde",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "JN",
+   "familia": "Jugo",
+   "variante": "Naranja",
+   "nombre": "Jugo de Naranja",
+   "precio": 500,
+   "descripcion": null
+  },
+  {
+   "codigo": "JP",
+   "familia": "Jugo",
+   "variante": "Papaya",
+   "nombre": "Jugo de Papaya",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "JI",
+   "familia": "Jugo",
+   "variante": "Piña",
+   "nombre": "Jugo de Piña",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "JL",
+   "familia": "Jugo",
+   "variante": "Plátano",
+   "nombre": "Jugo de Plátano",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "JM",
+   "familia": "Jugo",
+   "variante": "Mango",
+   "nombre": "Jugo de Mango",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "JA",
+   "familia": "Jugo",
+   "variante": "Arándano",
+   "nombre": "Jugo de Arándano",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "JF",
+   "familia": "Jugo",
+   "variante": "Fresa",
+   "nombre": "Jugo de Fresa",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "JS",
+   "familia": "Jugo",
+   "variante": "Surtido",
+   "nombre": "Jugo Surtido",
+   "precio": 800,
+   "descripcion": null
+  },
+  {
+   "codigo": "JE",
+   "familia": "Jugo",
+   "variante": "Especial",
+   "nombre": "Jugo Especial",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "BL",
+   "familia": "Batido",
+   "variante": "Plátano",
+   "nombre": "Batido de Plátano",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "BF",
+   "familia": "Batido",
+   "variante": "Papaya",
+   "nombre": "Batido de Papaya",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "BF",
+   "familia": "Batido",
+   "variante": "Fresa",
+   "nombre": "Batido de Fresa",
+   "precio": 1200,
+   "descripcion": null
+  },
+  {
+   "codigo": "BM",
+   "familia": "Batido",
+   "variante": "Mango",
+   "nombre": "Batido de Mango",
+   "precio": 1200,
+   "descripcion": null
+  },
+  {
+   "codigo": "BA",
+   "familia": "Batido",
+   "variante": "Arándano",
+   "nombre": "Batido de Arándano",
+   "precio": 1200,
+   "descripcion": null
+  },
+  {
+   "codigo": "MC",
+   "familia": "Mazamorra",
+   "variante": "Clásica",
+   "nombre": "Mazamorra Clásica",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "MA",
+   "familia": "Mazamorra",
+   "variante": "Arroz con Leche",
+   "nombre": "Mazamorra de Arroz con Leche",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "MM",
+   "familia": "Mazamorra",
+   "variante": "Morada",
+   "nombre": "Mazamorra Morada",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "MB",
+   "familia": "Mazamorra",
+   "variante": "Calabaza",
+   "nombre": "Mazamorra de Calabaza",
+   "precio": 600,
+   "descripcion": null
+  },
+  {
+   "codigo": "CP",
+   "familia": "Pescados-Mariscos",
+   "variante": "Ceviche de Pescado",
+   "nombre": "Ceviche de Pescado",
+   "precio": 1800,
+   "descripcion": null
+  },
+  {
+   "codigo": "CM",
+   "familia": "Pescados-Mariscos",
+   "variante": "Ceviche Mixto",
+   "nombre": "Ceviche Mixto",
+   "precio": 2000,
+   "descripcion": null
+  },
+  {
+   "codigo": "LT",
+   "familia": "Pescados-Mariscos",
+   "variante": "Leche de Tigre",
+   "nombre": "Leche de Tigre",
+   "precio": 1000,
+   "descripcion": null
+  },
+  {
+   "codigo": "AM",
+   "familia": "Pescados-Mariscos",
+   "variante": "Arroz con Mariscos",
+   "nombre": "Arroz con Mariscos",
+   "precio": 1800,
+   "descripcion": null
+  },
+  {
+   "codigo": "HP",
+   "familia": "Pescados-Mariscos",
+   "variante": "Chaufa de Pescado",
+   "nombre": "Chaufa de Pescado",
+   "precio": 1800,
+   "descripcion": null
+  },
+  {
+   "codigo": "CM",
+   "familia": "Pescados-Mariscos",
+   "variante": "Chaufa de Mariscos",
+   "nombre": "Chaufa de Mariscos",
+   "precio": 1800,
+   "descripcion": null
+  },
+  {
+   "codigo": "CH",
+   "familia": "Pescados-Mariscos",
+   "variante": "Chicharrón de Pescado",
+   "nombre": "Chicharrón de Pescado",
+   "precio": 1800,
+   "descripcion": null
+  },
+  {
+   "codigo": "CC",
+   "familia": "Pescados-Mariscos",
+   "variante": "Causa Acevichada",
+   "nombre": "Causa Acevichada",
+   "precio": 1500,
+   "descripcion": null
+  },
+  {
+   "codigo": "C2",
+   "familia": "Pescados-Mariscos",
+   "variante": "Dúo Ceviche con Chaufa de Mariscos",
+   "nombre": "Dúo Ceviche con Chaufa de Mariscos",
+   "precio": 2300,
+   "descripcion": null
+  },
+  {
+   "codigo": "A2",
+   "familia": "Pescados-Mariscos",
+   "variante": "Dúo Ceviche con Arroz con Mariscos",
+   "nombre": "Dúo Ceviche con Arroz con Mariscos",
+   "precio": 2300,
+   "descripcion": null
+  },
+  {
+   "codigo": "H2",
+   "familia": "Pescados-Mariscos",
+   "variante": "Dúo Ceviche con Chicharrón de Pescado",
+   "nombre": "Dúo Ceviche con Chicharrón de Pescado",
+   "precio": 2300,
+   "descripcion": null
+  },
+  {
+   "codigo": "A3",
+   "familia": "Pescados-Mariscos",
+   "variante": "Trío Ceviche con Chicharrón de Pescado con Arroz con Mariscos",
+   "nombre": "Trío Ceviche con Chicharrón de Pescado con Arroz con Mariscos",
+   "precio": 2600,
+   "descripcion": null
+  },
+  {
+   "codigo": "C3",
+   "familia": "Pescados-Mariscos",
+   "variante": "Trío Ceviche con Chicharrón de Pescado con Chaufa de Mariscos",
+   "nombre": "Trío Ceviche con Chicharrón de Pescado con Chaufa de Mariscos",
+   "precio": 2600,
+   "descripcion": null
+  }
+ ],
+ "adicionales": [
+  {
+   "codigo": "h",
+   "nombre": "Huevo",
+   "precio": 300
+  },
+  {
+   "codigo": "q",
+   "nombre": "Queso",
+   "precio": 300
+  },
+  {
+   "codigo": "d",
+   "nombre": "Hot Dog",
+   "precio": 300
+  },
+  {
+   "codigo": "p",
+   "nombre": "Plátano",
+   "precio": 300
+  },
+  {
+   "codigo": "j",
+   "nombre": "Jamón",
+   "precio": 300
+  },
+  {
+   "codigo": "g",
+   "nombre": "Piña",
+   "precio": 300
+  },
+  {
+   "codigo": "t",
+   "nombre": "Tocino",
+   "precio": 300
+  },
+  {
+   "codigo": "c",
+   "nombre": "Chorizo",
+   "precio": 300
+  },
+  {
+   "codigo": "a",
+   "nombre": "Papas",
+   "precio": 300
+  },
+  {
+   "codigo": "l",
+   "nombre": "Pastas Lomo",
+   "precio": 500
+  },
+  {
+   "codigo": "l",
+   "nombre": "Pastas Chuleta",
+   "precio": 500
+  },
+  {
+   "codigo": "o",
+   "nombre": "Pastas Pollo",
+   "precio": 500
+  },
+  {
+   "codigo": "v",
+   "nombre": "Vaso",
+   "precio": 100
+  },
+  {
+   "codigo": "t",
+   "nombre": "Táper",
+   "precio": 100
+  }
+ ],
+ "insumos": [
+  {
+   "nombre": "Pan Pita",
+   "costo": 350.0,
+   "presentacion": "500 Unidades"
+  },
+  {
+   "nombre": "Pan Hamburguesa",
+   "costo": 3.6,
+   "presentacion": "10 Unidades"
+  },
+  {
+   "nombre": "Pollo",
+   "costo": 225.0,
+   "presentacion": "1 Caja (15 Kg)"
+  },
+  {
+   "nombre": "Carne",
+   "costo": 42.0,
+   "presentacion": "2 Kg"
+  },
+  {
+   "nombre": "Papas al hilo",
+   "costo": 80.0,
+   "presentacion": "1 Pq (5 Kg)"
+  },
+  {
+   "nombre": "Lechuga",
+   "costo": 2.0,
+   "presentacion": "1 Unidad"
+  },
+  {
+   "nombre": "Tomate",
+   "costo": 3.5,
+   "presentacion": "1 Kg"
+  },
+  {
+   "nombre": "Zanahoria",
+   "costo": 1.5,
+   "presentacion": "1 Kg"
+  },
+  {
+   "nombre": "Betarraga",
+   "costo": 3.5,
+   "presentacion": "1 Atado"
+  },
+  {
+   "nombre": "Queso Mozzarella",
+   "costo": 70.0,
+   "presentacion": "1 Paquete (5 Kg)"
+  },
+  {
+   "nombre": "Piña",
+   "costo": 5.0,
+   "presentacion": "1 Unidad"
+  },
+  {
+   "nombre": "Jamonada",
+   "costo": 6.0,
+   "presentacion": "300 gr"
+  },
+  {
+   "nombre": "Hamburguesa",
+   "costo": 12.5,
+   "presentacion": "14 Unidades"
+  },
+  {
+   "nombre": "Hot Dog",
+   "costo": 9.0,
+   "presentacion": "20 Unidades"
+  },
+  {
+   "nombre": "Yerba Aromática",
+   "costo": 1.0,
+   "presentacion": "1 Unidad"
+  },
+  {
+   "nombre": "Linaza",
+   "costo": 12.0,
+   "presentacion": "1 Kg"
+  },
+  {
+   "nombre": "Cebada",
+   "costo": 4.0,
+   "presentacion": "1 Kg"
+  },
+  {
+   "nombre": "Especias",
+   "costo": 5.0,
+   "presentacion": "1 Pq"
+  },
+  {
+   "nombre": "Azúcar",
+   "costo": 178.0,
+   "presentacion": "50 Kg"
+  },
+  {
+   "nombre": "Limón",
+   "costo": 16.0,
+   "presentacion": "1 Ciento"
+  },
+  {
+   "nombre": "Sanqui",
+   "costo": 5.0,
+   "presentacion": "1 Kg"
+  },
+  {
+   "nombre": "Polen",
+   "costo": 5.0,
+   "presentacion": "1 Pt"
+  },
+  {
+   "nombre": "Granos Andinos",
+   "costo": 10.0,
+   "presentacion": "1 Bl"
+  }
+ ],
+ "recetas": [
+  {
+   "producto": "Shawarma Tradicional",
+   "lineas": [
+    {
+     "insumo": "Pan Pita",
+     "cantidad": 1.0,
+     "unidad": "un"
+    },
+    {
+     "insumo": "Pollo",
+     "cantidad": 120.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Papas al hilo",
+     "cantidad": 50.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Lechuga o Col corazón",
+     "cantidad": 15.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Tomate",
+     "cantidad": 5.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Zanahoria",
+     "cantidad": 5.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Betarraga",
+     "cantidad": 5.0,
+     "unidad": "gr"
+    }
+   ]
+  },
+  {
+   "producto": "Shawarma Huamanguino",
+   "lineas": [
+    {
+     "insumo": "Pan Pita",
+     "cantidad": 1.0,
+     "unidad": "un"
+    },
+    {
+     "insumo": "Carne",
+     "cantidad": 100.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Papas al hilo",
+     "cantidad": 50.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Lechuga o Col corazón",
+     "cantidad": 15.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Tomate",
+     "cantidad": 5.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Zanahoria",
+     "cantidad": 5.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Betarraga",
+     "cantidad": 5.0,
+     "unidad": "gr"
+    }
+   ]
+  },
+  {
+   "producto": "Shawarma Pizzero",
+   "lineas": [
+    {
+     "insumo": "Pan Pita",
+     "cantidad": 1.0,
+     "unidad": "un"
+    },
+    {
+     "insumo": "Pollo",
+     "cantidad": 120.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Papas al hilo",
+     "cantidad": 50.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Queso mozarela",
+     "cantidad": 35.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Piña",
+     "cantidad": 15.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Jamonada",
+     "cantidad": 1.0,
+     "unidad": "rd"
+    }
+   ]
+  },
+  {
+   "producto": "Artesanal Clásica",
+   "lineas": [
+    {
+     "insumo": "Pan hamburguesa",
+     "cantidad": 1.0,
+     "unidad": "un"
+    },
+    {
+     "insumo": "Carne",
+     "cantidad": 100.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Papas al hilo",
+     "cantidad": 40.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Lechuga o Col corazón",
+     "cantidad": 10.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Tomate",
+     "cantidad": 1.0,
+     "unidad": "rd"
+    }
+   ]
+  },
+  {
+   "producto": "Hot dog",
+   "lineas": [
+    {
+     "insumo": "Pan hamburguesa",
+     "cantidad": 1.0,
+     "unidad": "un"
+    },
+    {
+     "insumo": "Hot Dog",
+     "cantidad": 1.0,
+     "unidad": "un"
+    },
+    {
+     "insumo": "Queso",
+     "cantidad": 35.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Papas al hilo",
+     "cantidad": 40.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Lechuga o Col corazón",
+     "cantidad": 10.0,
+     "unidad": "gr"
+    },
+    {
+     "insumo": "Tomate",
+     "cantidad": 1.0,
+     "unidad": "rd"
+    }
+   ]
+  },
+  {
+   "producto": "Emoliente Clásico",
+   "lineas": [
+    {
+     "insumo": "Yerba Aromática",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Linaza",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Cebada",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Especias",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Azúcar",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Limón",
+     "cantidad": null,
+     "unidad": null
+    }
+   ]
+  },
+  {
+   "producto": "Emoliente Especial",
+   "lineas": [
+    {
+     "insumo": "Yerba Aromática",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Linaza",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Cebada",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Especias",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Azúcar",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Limón",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Sanqui o Flor de Jamaica",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Polen",
+     "cantidad": null,
+     "unidad": null
+    },
+    {
+     "insumo": "Granos Andinos",
+     "cantidad": null,
+     "unidad": null
+    }
+   ]
+  }
+ ],
+ "procesos": [
+  "Abrir local",
+  "Ordenar para inicio de preparado",
+  "Descongelar los insumos",
+  "Verificar y anotar faltantes de insumos",
+  "Preparar cremas",
+  "Sancochar tubérculos",
+  "Preparar refresco de cebada",
+  "Sancochar huevo para caldo",
+  "Hacer hervir agua de jamaica",
+  "Preparar adereso para carne y pollo",
+  "Filetear pollo",
+  "Mezclar pollo y carne con aderezo",
+  "Picar verduras y tubérculos sancochados",
+  "Lavar y limpiar gallina",
+  "Pelar kión y papas amarillas",
+  "Picar cebolla china y lavar",
+  "Lavar y picar lechuga o col",
+  "Preparar ají para caldo de gallina",
+  "Freír pollo y picar",
+  "Freír chorizo y",
+  "Hervir y preparar emoliente",
+  "Hervir y preparar caldo de gallina",
+  "Hervir agua para fideos",
+  "Servir y atender los pedidos",
+  "Limpiar plancha",
+  "Limpiar mesas y sillas",
+  "Barrer el patio y apagar luces",
+  "Limpiar el baño",
+  "Limpiar y baldear el local",
+  "Lavar ollas y servicios",
+  "Limpiar canastitas",
+  "Barrer y baldear área de preparados",
+  "Devolver todo en su lugar",
+  "Cerrar el local",
+  "Compra de insumos"
+ ]
+}

@@ -1,0 +1,262 @@
+// Shawarma Wasi — esquema de datos
+//
+// Sale de la «Nota de Pedidos» en Excel: cada hoja M1…M25 y L1…L10 es una
+// mesa o un pedido para llevar, la hoja Productos es la carta, Adicional los
+// extras, Detalle los cortes, y Consolidado/Arqueo son los pedidos ya cobrados.
+//
+// Tres reglas que atraviesan todo el modelo:
+//  1. El dinero son céntimos enteros. S/ 4.50 se guarda como 450.
+//  2. Los ítems guardan copia congelada del nombre y el precio que se vendió.
+//     Si mañana sube el shawarma, la venta de ayer no cambia.
+//  3. Nada del local vive fijo en el código: mesas, carta, adicionales,
+//     detalles, medios de pago, personal y datos del local se editan en
+//     Administración. La semilla solo los carga la primera vez.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Rol {
+  MOZO
+  COCINA
+  ADMIN
+}
+
+/// Cocina 1 (carta), cocina 2 (shawarmas), cocina 3 (emolientes y bebidas).
+enum Estacion {
+  CARTA
+  SHAWARMAS
+  BEBIDAS
+}
+
+enum TipoMesa {
+  SALON
+  LLEVAR
+}
+
+enum EstadoPedido {
+  ABIERTO
+  COBRADO
+  ANULADO
+}
+
+/// PENDIENTE = en cocina · LISTO = cocina terminó · ENTREGADO = el mozo lo sirvió.
+enum EstadoItem {
+  PENDIENTE
+  LISTO
+  ENTREGADO
+  ANULADO
+}
+
+/// «Tipo y Monto de Pago» de la nota: Efectivo, Yape, Plin, BCP…
+model MedioPago {
+  id       Int     @id @default(autoincrement())
+  /// Lo que guarda cada pago (EFECTIVO, YAPE…). No cambia aunque cambie el nombre.
+  clave    String  @unique
+  nombre   String
+  /// true = da vuelto, como el efectivo. Los demás se cobran por su monto exacto.
+  efectivo Boolean @default(false)
+  orden    Int
+  activo   Boolean @default(true)
+}
+
+/// La hoja «Detalle» del Excel: cómo sale el plato (Corte 2 =, Individual…).
+/// En la nota se elige con M: (mesa) o L: (llevar) delante.
+model Detalle {
+  id     Int     @id @default(autoincrement())
+  nombre String  @unique
+  orden  Int
+  activo Boolean @default(true)
+}
+
+/// Los datos del local y las preferencias del sistema. Una sola fila (id 1).
+model Ajustes {
+  id            Int      @id @default(1)
+  nombre        String   @default("Shawarma Wasi")
+  subtitulo     String   @default("Peruvian Cuisine")
+  direccion     String   @default("")
+  telefono      String   @default("")
+  ruc           String   @default("")
+  /// Lo que se imprime al pie de la nota.
+  pieNota       String   @default("¡Gracias por su visita!")
+  /// Nombre de cada cocina: { "CARTA": "Carta", "SHAWARMAS": "Shawarmas", … }.
+  estaciones    Json     @default("{}")
+  /// Las observaciones que el mozo elige en la columna «Obs:» sin escribirlas.
+  observaciones String[] @default([])
+  /// A los cuántos minutos en cocina un pedido se marca como demorado.
+  minutosAlerta Int      @default(15)
+}
+
+model Usuario {
+  id       Int      @id @default(autoincrement())
+  nombre   String
+  rol      Rol
+  pinHash  String
+  activo   Boolean  @default(true)
+  creadoEn DateTime @default(now()) @db.Timestamptz(3)
+  pedidos  Pedido[]
+}
+
+/// La columna «Producto» del Excel: Shawarma, Artesanal-Carne, Caldo…
+model Familia {
+  id          Int        @id @default(autoincrement())
+  clave       String     @unique
+  nombre      String
+  estacion    Estacion
+  icono       String
+  orden       Int
+  admiteCorte Boolean    @default(false)
+  activa      Boolean    @default(true)
+  productos   Producto[]
+}
+
+/// La columna «Detalle» del Excel: la variante dentro de la familia.
+model Producto {
+  id          Int          @id @default(autoincrement())
+  familiaId   Int
+  familia     Familia      @relation(fields: [familiaId], references: [id])
+  codigo      String?
+  variante    String
+  nombre      String
+  descripcion String?
+  precio      Int
+  imagenUrl   String?
+  orden       Int
+  activo      Boolean      @default(true)
+  /// false = agotado por hoy: sigue en la carta pero no se puede pedir.
+  disponible  Boolean      @default(true)
+  receta      RecetaItem[]
+  items       ItemPedido[]
+
+  @@unique([familiaId, variante])
+}
+
+model Adicional {
+  id         Int        @id @default(autoincrement())
+  codigo     String?
+  nombre     String     @unique
+  precio     Int
+  orden      Int
+  activo     Boolean    @default(true)
+  /// En qué cocinas se ofrece. Vacío = en todas.
+  estaciones Estacion[]
+  /// Si solo aplica a una familia (los extras de Pastas).
+  familia    String?
+}
+
+model Mesa {
+  id      Int      @id @default(autoincrement())
+  numero  Int
+  tipo    TipoMesa
+  activa  Boolean  @default(true)
+  pedidos Pedido[]
+
+  @@unique([tipo, numero])
+}
+
+model Pedido {
+  id            Int          @id @default(autoincrement())
+  mesaId        Int
+  mesa          Mesa         @relation(fields: [mesaId], references: [id])
+  mozoId        Int?
+  mozo          Usuario?     @relation(fields: [mozoId], references: [id])
+  cliente       String?
+  estado        EstadoPedido @default(ABIERTO)
+  total         Int          @default(0)
+  creadoEn      DateTime     @default(now()) @db.Timestamptz(3)
+  actualizadoEn DateTime     @updatedAt @db.Timestamptz(3)
+  cobradoEn     DateTime?    @db.Timestamptz(3)
+  anuladoEn     DateTime?    @db.Timestamptz(3)
+  items         ItemPedido[]
+  pagos         Pago[]
+
+  @@index([mesaId, estado])
+  @@index([estado, cobradoEn])
+  /// Los reportes filtran por el momento del cobro (rangos de fecha de Lima).
+  @@index([cobradoEn])
+  /// El número de la nota en el día se cuenta por la hora de creación.
+  @@index([creadoEn])
+  @@index([mozoId])
+}
+
+model ItemPedido {
+  id                Int        @id @default(autoincrement())
+  pedidoId          Int
+  pedido            Pedido     @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  productoId        Int?
+  producto          Producto?  @relation(fields: [productoId], references: [id])
+  /// Cada envío a cocina es una ronda: la comanda de cocina es (pedido, ronda, estación).
+  ronda             Int
+  nombre            String
+  familia           String
+  estacion          Estacion
+  cantidad          Int
+  precio            Int
+  adicionales       Json       @default("[]")
+  precioAdicionales Int        @default(0)
+  subtotal          Int
+  /// La columna «Detalle:» de la nota (Corte 2 =, Individual…), copiada como se vendió.
+  detalle           String?
+  /// M: o L: — si el plato sale para llevar.
+  paraLlevar        Boolean    @default(false)
+  observacion       String?
+  estado            EstadoItem @default(PENDIENTE)
+  creadoEn          DateTime   @default(now()) @db.Timestamptz(3)
+  listoEn           DateTime?  @db.Timestamptz(3)
+  entregadoEn       DateTime?  @db.Timestamptz(3)
+  anuladoEn         DateTime?  @db.Timestamptz(3)
+
+  @@index([estacion, estado])
+  @@index([pedidoId])
+  /// La hoja de cocina muestra lo atendido o anulado desde la última «Limpiar».
+  @@index([listoEn])
+  @@index([anuladoEn])
+  @@index([productoId])
+}
+
+model Pago {
+  id       Int        @id @default(autoincrement())
+  pedidoId Int
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  /// La clave del medio de pago (EFECTIVO, YAPE…).
+  metodo   String
+  /// Lo que se aplica a la cuenta. Con efectivo, `recibido - monto` es el vuelto.
+  monto    Int
+  recibido Int?
+  creadoEn DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([pedidoId])
+  @@index([metodo])
+}
+
+/// La hoja «Costos»: lo que cuesta comprar cada insumo.
+model Insumo {
+  id             Int          @id @default(autoincrement())
+  nombre         String       @unique
+  /// Precio de compra en céntimos, por la presentación.
+  costoCompra    Int
+  presentacion   String
+  /// Cuántas unidades base trae la presentación (15 000 g en la caja de pollo).
+  cantidadCompra Float
+  /// Unidad base con que la receta mide este insumo: g, un, rd…
+  unidad         String
+  recetas        RecetaItem[]
+}
+
+/// La hoja «Insumos»: cuánto de cada insumo lleva un producto.
+model RecetaItem {
+  id         Int      @id @default(autoincrement())
+  productoId Int
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  insumoId   Int
+  insumo     Insumo   @relation(fields: [insumoId], references: [id])
+  cantidad   Float?
+  unidad     String?
+
+  @@unique([productoId, insumoId])
+  @@index([insumoId])
+}

@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: shawarma_wasi_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wasi
+      POSTGRES_PASSWORD: wasi
+      POSTGRES_DB: shawarma_wasi
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - wasi_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wasi -d shawarma_wasi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  wasi_pgdata:

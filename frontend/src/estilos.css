@@ -1,0 +1,419 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/roboto/wdth.css';
+
+/*
+ * Shawarma Wasi — sistema visual «Hoja»
+ *
+ * El local trabajaba en un libro de Google Sheets: una hoja por mesa (M1…M25,
+ * L1…L10) con la «Nota de Pedido» armada con desplegables, la hoja «Atención
+ * al Cliente» para cocina y hojas de reporte con cabeceras rojas. El sistema
+ * es ese libro hecho aplicación: celdas, cabeceras de color, pestañas al pie,
+ * esquinas rectas y botones sólidos como en un programa de escritorio.
+ *
+ * Los colores son los del libro, tal cual: verde oscuro para las cabeceras de
+ * la nota, vino para el nombre del local, turquesa para cocina, rojo para los
+ * reportes, menta para «Pendiente», rosa para «Atendido», ámbar para
+ * «Anulado», oliva para «Limpiar» y verde para «Guardar».
+ *
+ * Una sola letra, Roboto (la de Sheets), con cifras tabulares para que los
+ * montos se alineen columna con columna.
+ */
+@theme {
+  --font-sans: 'Roboto Variable', Roboto, Arial, ui-sans-serif, system-ui, sans-serif;
+
+  /* Papel y tinta: los grises de una hoja de cálculo. */
+  --color-fondo: #eef0f2;
+  --color-hoja: #ffffff;
+  --color-gris-50: #f8f9fa;
+  --color-gris-100: #f1f3f4;
+  --color-gris-150: #eaedf0;
+  --color-reja: #dadce0;
+  --color-reja-2: #c4c7cc;
+  --color-tinta: #202124;
+  --color-tinta-2: #5f6368;
+  --color-tinta-3: #80868b;
+  --color-tinta-4: #bdc1c6;
+  --color-campo: #d9d9d9;
+
+  /* Los colores del libro del local. */
+  --color-verde-3: #274e13;
+  --color-verde-2: #38761d;
+  --color-verde-boton: #3d9019;
+  --color-verde-1: #6aa84f;
+  --color-verde-claro: #93c47d;
+  --color-menta: #b7e1cd;
+  --color-menta-suave: #e6f4ea;
+  --color-vino: #85200c;
+  --color-vino-3: #5b0f00;
+  --color-rosa: #f4cccc;
+  --color-rosa-2: #f4c7c3;
+  --color-rosa-suave: #fce8e6;
+  --color-rojo-oscuro: #980000;
+  --color-rojo: #cc0000;
+  --color-rojo-reporte: #a61c00;
+  --color-salmon: #e06666;
+  --color-turquesa: #134f5c;
+  --color-turquesa-2: #45818e;
+  --color-oliva: #8b6902;
+  --color-ambar: #fce8b2;
+  --color-ambar-oscuro: #7f6000;
+  --color-crema: #fff2cc;
+  --color-naranja: #b45f06;
+  --color-celeste: #c9daf8;
+  --color-azul-oscuro: #1c4587;
+  --color-azul: #1a73e8;
+  --color-azul-suave: #e8f0fe;
+  --color-magenta: #741b47;
+
+  --ease-suave: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --animate-destello: destello 1.6s var(--ease-suave);
+  --animate-latido: latido 1.4s ease-in-out infinite;
+
+  /* Una fila recién llegada se enciende y se apaga, como al pegar en Excel. */
+  @keyframes destello {
+    from {
+      background-color: var(--color-crema);
+    }
+  }
+  @keyframes latido {
+    50% {
+      opacity: 0.35;
+    }
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#raiz {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-fondo);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+::selection {
+  background: var(--color-azul-suave);
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button:disabled {
+  cursor: default;
+}
+
+/* La celda activa de Sheets: un marco azul. */
+:focus-visible {
+  outline: 2px solid var(--color-azul);
+  outline-offset: -2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Letra angosta para las columnas apretadas de una tabla en el celular. */
+.angosta {
+  font-stretch: 87.5%;
+}
+
+.sin-barra {
+  scrollbar-width: none;
+}
+.sin-barra::-webkit-scrollbar {
+  display: none;
+}
+
+.barra-fina {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-reja-2) transparent;
+}
+
+@layer components {
+  /* ── Botones: rectángulos sólidos, como «Limpiar» y «Guardar» del Excel ── */
+  .boton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    transition:
+      background-color 0.12s,
+      border-color 0.12s,
+      color 0.12s,
+      box-shadow 0.12s;
+    user-select: none;
+  }
+  .boton:active:not(:disabled) {
+    box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.18);
+  }
+  .boton:disabled {
+    opacity: 0.45;
+  }
+  .boton-guardar {
+    background: var(--color-verde-boton);
+    color: #fff;
+  }
+  .boton-guardar:hover:not(:disabled) {
+    background: #357d15;
+  }
+  .boton-limpiar {
+    background: var(--color-oliva);
+    color: #fff;
+  }
+  .boton-limpiar:hover:not(:disabled) {
+    background: #765901;
+  }
+  .boton-oscuro {
+    background: var(--color-verde-3);
+    color: #fff;
+  }
+  .boton-oscuro:hover:not(:disabled) {
+    background: #1d3a0e;
+  }
+  .boton-cobrar {
+    background: var(--color-azul-oscuro);
+    color: #fff;
+  }
+  .boton-cobrar:hover:not(:disabled) {
+    background: #15356a;
+  }
+  .boton-peligro {
+    background: var(--color-rojo);
+    color: #fff;
+  }
+  .boton-peligro:hover:not(:disabled) {
+    background: #ad0000;
+  }
+  .boton-claro {
+    background: #fff;
+    color: var(--color-tinta);
+    border-color: var(--color-reja-2);
+  }
+  .boton-claro:hover:not(:disabled) {
+    background: var(--color-gris-50);
+    border-color: var(--color-tinta-4);
+  }
+  .boton-plano {
+    background: transparent;
+    color: var(--color-tinta-2);
+  }
+  .boton-plano:hover:not(:disabled) {
+    background: var(--color-gris-100);
+    color: var(--color-tinta);
+  }
+
+  /* ── La hoja: papel blanco con marco ── */
+  .hoja {
+    background: var(--color-hoja);
+    border: 1px solid var(--color-reja);
+  }
+  .sombra-hoja {
+    box-shadow:
+      0 1px 2px rgb(60 64 67 / 0.12),
+      0 1px 3px 1px rgb(60 64 67 / 0.06);
+  }
+  .sombra-menu {
+    box-shadow:
+      0 2px 6px 2px rgb(60 64 67 / 0.15),
+      0 1px 2px rgb(60 64 67 / 0.3);
+  }
+
+  /* Cabecera de tabla: blanco sobre color, con los dos puntos del Excel. */
+  .cabecera {
+    background: var(--color-verde-3);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 400;
+    text-align: center;
+  }
+
+  /* Un desplegable dentro de una celda: el «chip» gris con su flecha. */
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+    height: 30px;
+    padding: 0 4px 0 8px;
+    background: var(--color-gris-150);
+    color: var(--color-tinta);
+    font-size: 14px;
+    text-align: left;
+    transition: background-color 0.12s;
+  }
+  .chip:hover:not(:disabled) {
+    background: #dfe3e7;
+  }
+  .chip[aria-expanded='true'] {
+    background: #dfe3e7;
+    box-shadow: inset 0 0 0 2px var(--color-azul);
+  }
+  .chip:disabled {
+    background: transparent;
+    color: var(--color-tinta-3);
+  }
+
+  /* Campo de texto con forma de celda. */
+  .campo {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    padding: 0 10px;
+    background: #fff;
+    border: 1px solid var(--color-reja-2);
+    color: var(--color-tinta);
+    font-size: 14px;
+    transition:
+      border-color 0.12s,
+      box-shadow 0.12s;
+  }
+  .campo:hover {
+    border-color: var(--color-tinta-4);
+  }
+  .campo:focus {
+    border-color: var(--color-azul);
+    box-shadow: inset 0 0 0 1px var(--color-azul);
+  }
+  .campo::placeholder {
+    color: var(--color-tinta-4);
+  }
+
+  /* ── Tablas del panel: la planilla del Excel con su cabecera de color ── */
+  .tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .tabla th {
+    height: 36px;
+    padding: 0 8px;
+    background: var(--tono, var(--color-verde-2));
+    color: #fff;
+    font-size: 13px;
+    font-weight: 400;
+    text-align: center;
+    white-space: nowrap;
+    border-right: 1px solid rgb(255 255 255 / 0.18);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .tabla th:last-child {
+    border-right: 0;
+  }
+  .tabla td {
+    height: 38px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--color-reja);
+    border-right: 1px solid var(--color-reja);
+    vertical-align: middle;
+  }
+  .tabla td:last-child {
+    border-right: 0;
+  }
+  .tabla tbody tr:hover td {
+    background-color: var(--color-azul-suave);
+  }
+  .tabla tfoot td {
+    background: var(--color-gris-100);
+    font-weight: 500;
+  }
+  /* Celda que se edita en el sitio, como en la hoja. */
+  .tabla td.editable {
+    padding: 0;
+  }
+
+  /* ── Tarjetas de cifras con degradado, como el panel Java de referencia ── */
+  .kpi {
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+    box-shadow:
+      0 2px 4px rgb(0 0 0 / 0.12),
+      0 6px 16px -6px rgb(0 0 0 / 0.25);
+  }
+  .kpi-rojo {
+    background: linear-gradient(120deg, #cc4125 0%, #e06666 45%, #f6b26b 100%);
+  }
+  .kpi-turquesa {
+    background: linear-gradient(120deg, #134f5c 0%, #2b7f8f 50%, #4fb3c4 100%);
+  }
+  .kpi-verde {
+    background: linear-gradient(120deg, #274e13 0%, #38761d 45%, #6aa84f 100%);
+  }
+  .kpi-magenta {
+    background: linear-gradient(120deg, #4c1130 0%, #741b47 45%, #c27ba0 100%);
+  }
+
+  /* Etiqueta negra de la nota: «User:», «Fecha». */
+  .rotulo-negro {
+    background: #000;
+    color: #fff;
+    font-size: 13px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+}
+
+/* Sello de «PAGADO» sobre la nota. */
+.sello {
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  border: 3px double currentColor;
+  transform: rotate(-8deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-imprimir {
+    display: none !important;
+  }
+}
