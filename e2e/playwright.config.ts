@@ -6,6 +6,7 @@ import { defineConfig, devices } from '@playwright/test'
  * Se corren con `npm run test:e2e`, que prepara todo eso antes.
  */
 const PUERTO = 4399
+const vercel = process.env.PRUEBA_VERCEL === '1'
 
 export default defineConfig({
   testDir: '.',
@@ -29,11 +30,11 @@ export default defineConfig({
     { name: 'celular', testMatch: /celular/, use: { ...devices['Pixel 7'], channel: 'chrome' } },
   ],
   webServer: {
-    command: 'node backend/dist/index.js',
+    command: vercel ? 'node e2e/servidor-vercel.mjs' : 'node backend/dist/index.js',
     cwd: '..',
     url: `http://localhost:${PUERTO}/salud`,
     reuseExistingServer: false,
     timeout: 60_000,
-    env: { PORT: String(PUERTO), NODE_ENV: 'production' },
+    env: { PORT: String(PUERTO), NODE_ENV: 'production', SINCRONIZACION: vercel ? 'consulta' : 'socket' },
   },
 })

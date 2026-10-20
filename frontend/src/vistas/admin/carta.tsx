@@ -1,23 +1,53 @@
 import { Fragment, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { mdiArrowDown, mdiArrowUp, mdiDelete, mdiDotsVertical, mdiFormatListBulleted, mdiMagnify, mdiPlus, mdiPlusBox, mdiShape, mdiSilverwareForkKnife, mdiTagMultiple } from '@mdi/js'
+import {
+  mdiArrowDown,
+  mdiArrowUp,
+  mdiChefHat,
+  mdiDelete,
+  mdiDotsVertical,
+  mdiFormatListBulleted,
+  mdiMagnify,
+  mdiPlus,
+  mdiPlusBox,
+  mdiShape,
+  mdiSilverwareForkKnife,
+  mdiStorefront,
+  mdiTagMultiple,
+  mdiViewGridOutline,
+} from '@mdi/js'
 import type { Estacion } from '@wasi/shared'
-import { ESTACIONES } from '@wasi/shared'
+import { ESTACIONES, juntasEnCocina } from '@wasi/shared'
 import { api } from '../../lib/api'
 import { useRecurso } from '../../lib/recurso'
 import { useAjustes, nombreCocina } from '../../lib/ajustes'
+import { useSesion } from '../../lib/sesion'
+import { useSucursal } from '../../lib/sucursal'
+import { soles } from '../../lib/formato'
+import { avisar } from '../../componentes/avisos'
 import { Boton } from '../../componentes/boton'
 import { Desplegable, DesplegableMultiple, Menu } from '../../componentes/desplegable'
 import { Dialogo, confirmar } from '../../componentes/dialogo'
 import { ICONOS_FAMILIA, Icono, iconoFamilia } from '../../componentes/icono'
 import { aCentimos } from '../mozo/pago'
-import { Casilla, CeldaEditable, Pagina, Panel, PestanasPagina, Tabla, useAccion } from './piezas'
+import { Casilla, CeldaEditable, Pagina, Panel, PestanasPagina, RequiereSucursal, Tabla, useAccion } from './piezas'
 
 /**
  * La carta: las hojas «Productos», «Adicional» y «Detalle» del Excel, cada una
  * con la cabecera de su color. Todo se edita en la misma celda (se toca, se
  * escribe y se guarda al salir), y los mozos ven el cambio al instante.
+ *
+ * Es una para todas las sucursales. La hoja «En la sucursal» tiene lo propio
+ * de cada una: su precio (el combo más barato de un local nuevo), lo que no
+ * ofrece y lo que se le agotó hoy. Un producto puede ser exclusivo de una
+ * sucursal. La encargada solo ve esa hoja, y solo marca los agotados.
  */
+
+interface EnSucursal {
+  precio: number | null
+  oculto: boolean
+  agotado: boolean
+}
 
 interface ProductoAdmin {
   id: number
@@ -28,7 +58,10 @@ interface ProductoAdmin {
   precio: number
   orden: number
   activo: boolean
-  disponible: boolean
+  /** null = en todas las sucursales; con valor, solo en esa. */
+  sucursalId: number | null
+  /** Lo propio de la sucursal elegida arriba. */
+  enSucursal: EnSucursal | null
   vendidos: number
 }
 interface FamiliaAdmin {
@@ -59,7 +92,7 @@ interface DetalleAdmin {
   activo: boolean
 }
 
-type Hoja = 'productos' | 'familias' | 'adicionales' | 'detalles'
+type Hoja = 'productos' | 'familias' | 'adicionales' | 'detalles' | 'sucursal'
 
 /** Mueve un id una posición y devuelve el nuevo orden de la lista. */
 function moverEn(ids: number[], id: number, paso: -1 | 1) {
@@ -87,14 +120,25 @@ function MenuFila({ alSubir, alBajar, alBorrar, borrarTexto = 'Borrar' }: { alSu
 }
 
 export function CartaAdmin() {
+  const sesion = useSesion()
+  const esAdmin = sesion?.usuario.rol === 'ADMIN'
+  const { sucursal, sucursales } = useSucursal()
   const [params, setParams] = useSearchParams()
-  const hoja = (params.get('hoja') as Hoja | null) ?? 'productos'
+  const hoja: Hoja = esAdmin ? ((params.get('hoja') as Hoja | null) ?? 'productos') : 'sucursal'
   const { datos, recargar } = useRecurso<{ familias: FamiliaAdmin[]; adicionales: AdicionalAdmin[] }>('/admin/carta', (c) => !!c.carta)
-  const { datos: detalles, recargar: recargarDetalles } = useRecurso<DetalleAdmin[]>('/admin/detalles', (c) => !!c.carta)
+  const { datos: detalles, recargar: recargarDetalles } = useRecurso<DetalleAdmin[]>(esAdmin ? '/admin/detalles' : null, (c) => !!c.carta)
   const productos = datos?.familias.reduce((s, f) => s + f.productos.length, 0) ?? 0
 
+  if (!esAdmin) {
+    return (
+      <Pagina titulo={`Carta · ${sucursal?.nombre ?? ''}`} detalle="Marca lo que se agotó hoy: los mozos lo ven al instante y no pueden pedirlo.">
+        <HojaSucursal familias={datos?.familias ?? []} recargar={recargar} esAdmin={false} />
+      </Pagina>
+    )
+  }
+
   return (
-    <Pagina titulo="Carta y precios" detalle="Los cambios llegan al instante a los celulares de los mozos.">
+    <Pagina titulo="Carta y precios" detalle="Una carta para todas las sucursales. Los cambios llegan al instante a los celulares de los mozos.">
       <PestanasPagina<Hoja>
         activa={hoja}
         alCambiar={(h) => setParams({ hoja: h }, { replace: true })}
@@ -103,6 +147,7 @@ export function CartaAdmin() {
           { clave: 'familias', etiqueta: 'Familias', icono: mdiShape, cuenta: datos?.familias.length },
           { clave: 'adicionales', etiqueta: 'Adicionales', icono: mdiPlusBox, cuenta: datos?.adicionales.length },
           { clave: 'detalles', etiqueta: 'Detalles', icono: mdiTagMultiple, cuenta: detalles?.length },
+          { clave: 'sucursal', etiqueta: sucursal && sucursales.length > 1 ? `En ${sucursal.nombre}` : 'Precios y agotados', icono: mdiStorefront },
         ]}
       />
       <div className="pt-4">
@@ -110,14 +155,163 @@ export function CartaAdmin() {
         {hoja === 'familias' && <HojaFamilias familias={datos?.familias ?? []} recargar={recargar} />}
         {hoja === 'adicionales' && <HojaAdicionales adicionales={datos?.adicionales ?? []} familias={datos?.familias ?? []} recargar={recargar} />}
         {hoja === 'detalles' && <HojaDetalles detalles={detalles ?? []} recargar={recargarDetalles} />}
+        {hoja === 'sucursal' && (
+          <RequiereSucursal que="Los precios propios y los agotados">
+            <HojaSucursal familias={datos?.familias ?? []} recargar={recargar} esAdmin />
+          </RequiereSucursal>
+        )}
       </div>
     </Pagina>
+  )
+}
+
+/* ── En la sucursal ────────────────────────────────────────────────────── */
+
+/**
+ * Lo propio de la sucursal elegida: a qué precio vende cada producto (vacío =
+ * el de la carta), si lo ofrece y si se le agotó hoy. Los exclusivos de otra
+ * sucursal no aparecen.
+ */
+function HojaSucursal({ familias, recargar, esAdmin }: { familias: FamiliaAdmin[]; recargar: () => unknown; esAdmin: boolean }) {
+  const { id, sucursal, sucursales } = useSucursal()
+  const ajustes = useAjustes()
+  const accion = useAccion(recargar)
+  const [q, setQ] = useState('')
+  const [soloAgotados, setSoloAgotados] = useState(false)
+  const ajustar = (productoId: number, d: Partial<EnSucursal>) =>
+    api<{ tambienEn: string[] }>(`/admin/productos/${productoId}/sucursal`, { metodo: 'PUT', cuerpo: d }).then(async (r) => {
+      await recargar()
+      return r
+    })
+  const filtro = q.trim().toLowerCase()
+
+  // Cocina compartida: las cocinas que esta sucursal comparte con otras, y con cuáles.
+  const compartidas = id ? ESTACIONES.filter((e) => juntasEnCocina(sucursales, id, e).length > 1) : []
+  const con = id
+    ? [...new Set(compartidas.flatMap((e) => juntasEnCocina(sucursales, id, e)))].filter((x) => x !== id).map((x) => sucursales.find((s) => s.id === x)?.nombre ?? '')
+    : []
+
+  const visibles = familias
+    .filter((f) => f.activa)
+    .map((f) => ({
+      ...f,
+      productos: f.productos.filter(
+        (p) =>
+          p.activo &&
+          (p.sucursalId === null || p.sucursalId === id) &&
+          (!filtro || `${p.nombre} ${p.codigo ?? ''}`.toLowerCase().includes(filtro)) &&
+          (!soloAgotados || p.enSucursal?.agotado),
+      ),
+    }))
+    .filter((f) => f.productos.length > 0)
+  const agotados = familias.reduce((s, f) => s + f.productos.filter((p) => p.enSucursal?.agotado).length, 0)
+
+  return (
+    <>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <label className="flex h-9 min-w-[200px] flex-1 items-center gap-2 border border-reja-2 bg-hoja px-2.5 focus-within:border-azul sm:max-w-[320px]">
+          <Icono d={mdiMagnify} className="size-[18px] text-tinta-3" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar producto" className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-tinta-4" />
+        </label>
+        <label className="flex h-9 items-center gap-1 border border-reja-2 bg-hoja pr-3 text-[13.5px] text-tinta-2">
+          <Casilla etiqueta="Ver solo los agotados" marcada={soloAgotados} alCambiar={setSoloAgotados} />
+          Solo agotados ({agotados})
+        </label>
+      </div>
+      {con.length > 0 && (
+        <p className="mb-3 flex items-start gap-2 border border-[#f1c232] bg-crema px-3 py-2 text-[13px] text-ambar-oscuro">
+          <Icono d={mdiChefHat} className="mt-px size-[18px] shrink-0" />
+          <span>
+            {sucursal?.nombre} comparte la cocina con {con.join(' y ')} ({compartidas.map((e) => ajustes.estaciones[e]).join(' y ')}): lo que se agote de esas cocinas se agota
+            en las dos.
+          </span>
+        </p>
+      )}
+      <Panel titulo={`Carta de ${sucursal?.nombre ?? 'la sucursal'}`} estilo="excel" color="#134f5c" relleno={false}>
+        <Tabla
+          tono="turquesa"
+          alto="calc(100dvh - 300px)"
+          columnas={[
+            { titulo: 'Producto' },
+            { titulo: 'Precio de carta', ancho: '120px' },
+            { titulo: 'Precio aquí', ancho: '120px' },
+            { titulo: 'Se ofrece', ancho: '88px' },
+            { titulo: 'Agotado hoy', ancho: '104px' },
+          ]}
+        >
+          {visibles.map((f) => (
+            <Fragment key={f.id}>
+              <tr>
+                <td colSpan={5} className="!h-8 bg-gris-100! text-[12.5px] font-medium text-tinta-2">
+                  <span className="flex items-center gap-2">
+                    <Icono d={iconoFamilia(f.icono)} className="size-4" /> {f.nombre}
+                  </span>
+                </td>
+              </tr>
+              {f.productos.map((p) => {
+                const aqui = p.enSucursal ?? { precio: null, oculto: false, agotado: false }
+                return (
+                  <tr key={p.id} className={aqui.oculto ? 'text-tinta-3' : aqui.agotado ? 'bg-rosa-suave' : ''}>
+                    <td>
+                      <span className="flex items-center gap-2">
+                        <span className="truncate">{p.nombre}</span>
+                        {p.sucursalId && <span className="shrink-0 bg-azul-suave px-1.5 text-[11.5px] font-medium text-azul">Solo aquí</span>}
+                      </span>
+                    </td>
+                    <td className="text-right text-tinta-2 tabular-nums">{soles(p.precio)}</td>
+                    {esAdmin && !p.sucursalId ? (
+                      <td className="editable">
+                        <CeldaEditable
+                          etiqueta={`Precio de ${p.nombre} aquí`}
+                          tipo="soles"
+                          alinear="derecha"
+                          placeholder={soles(p.precio)}
+                          valor={aqui.precio}
+                          alGuardar={(v) => ajustar(p.id, { precio: typeof v === 'number' ? v : null })}
+                        />
+                      </td>
+                    ) : (
+                      <td className={`text-right tabular-nums ${aqui.precio !== null ? 'font-medium text-azul-oscuro' : 'text-tinta-4'}`}>{aqui.precio !== null ? soles(aqui.precio) : '—'}</td>
+                    )}
+                    <td>
+                      <Casilla etiqueta={`Ofrecer ${p.nombre} en esta sucursal`} marcada={!aqui.oculto} deshabilitada={!esAdmin} alCambiar={(v) => void accion(() => ajustar(p.id, { oculto: !v }))} />
+                    </td>
+                    <td>
+                      <Casilla
+                        etiqueta={`${p.nombre} agotado hoy`}
+                        marcada={aqui.agotado}
+                        deshabilitada={aqui.oculto}
+                        alCambiar={(v) =>
+                          void accion(async () => {
+                            const r = await ajustar(p.id, { agotado: v })
+                            const tambien = r.tambienEn.length ? ` aquí y en ${r.tambienEn.join(' y ')} (comparten cocina)` : ''
+                            avisar(v ? `${p.nombre}: agotado por hoy${tambien}` : `${p.nombre}: disponible otra vez${tambien}`, 'ok')
+                          })
+                        }
+                      />
+                    </td>
+                  </tr>
+                )
+              })}
+            </Fragment>
+          ))}
+        </Tabla>
+      </Panel>
+      <p className="mt-2 text-[12.5px] text-tinta-3">
+        {esAdmin
+          ? '«Precio aquí» vacío = el precio de la carta. «Se ofrece» sin marcar = esta sucursal no lo vende. «Agotado hoy»: el mozo lo ve, pero no puede pedirlo.'
+          : '«Agotado hoy»: el mozo lo ve en la carta, pero no puede pedirlo. Los precios los pone la administración.'}
+      </p>
+    </>
   )
 }
 
 /* ── Productos ─────────────────────────────────────────────────────────── */
 
 function HojaProductos({ familias, recargar }: { familias: FamiliaAdmin[]; recargar: () => unknown }) {
+  const { sucursales } = useSucursal()
+  const variasSucursales = sucursales.length > 1
+  const opcionesSucursal = [{ valor: 0, etiqueta: 'Todas', icono: mdiViewGridOutline }, ...sucursales.map((s) => ({ valor: s.id, etiqueta: `Solo ${s.nombre}`, icono: mdiStorefront }))]
   const [familiaId, setFamiliaId] = useState<number | null>(null)
   const [q, setQ] = useState('')
   const [nuevo, setNuevo] = useState(false)
@@ -164,7 +358,7 @@ function HojaProductos({ familias, recargar }: { familias: FamiliaAdmin[]; recar
             { titulo: 'Detalle (variante)', ancho: '200px' },
             { titulo: 'Nombre' },
             { titulo: 'Precio', ancho: '96px' },
-            { titulo: 'Disponible', ancho: '92px' },
+            ...(variasSucursales ? [{ titulo: 'Se vende en', ancho: '170px' }] : []),
             { titulo: 'En carta', ancho: '80px' },
             { titulo: '', ancho: '48px' },
           ]}
@@ -172,7 +366,7 @@ function HojaProductos({ familias, recargar }: { familias: FamiliaAdmin[]; recar
           {visibles.map((f) => (
             <Fragment key={f.id}>
               <tr>
-                <td colSpan={8} className="!h-8 bg-gris-100! text-[12.5px] font-medium text-tinta-2">
+                <td colSpan={variasSucursales ? 8 : 7} className="!h-8 bg-gris-100! text-[12.5px] font-medium text-tinta-2">
                   <span className="flex items-center gap-2">
                     <Icono d={iconoFamilia(f.icono)} className="size-4" /> {f.nombre} · {nombreCocinaCorta(f.estacion)}
                     {!f.activa && <span className="bg-ambar px-1.5 text-ambar-oscuro">familia oculta</span>}
@@ -208,9 +402,18 @@ function HojaProductos({ familias, recargar }: { familias: FamiliaAdmin[]; recar
                     <td className="editable">
                       <CeldaEditable etiqueta="Precio" tipo="soles" alinear="derecha" valor={p.precio} alGuardar={(v) => guardar(p.id, { precio: v ?? 0 })} />
                     </td>
-                    <td>
-                      <Casilla etiqueta="Disponible hoy" marcada={p.disponible} alCambiar={(v) => void accion(() => guardar(p.id, { disponible: v }), v ? `${p.nombre}: disponible` : `${p.nombre}: agotado por hoy`)} />
-                    </td>
+                    {variasSucursales && (
+                      <td className="editable px-1!">
+                        <Desplegable
+                          titulo="Se vende en"
+                          valor={p.sucursalId ?? 0}
+                          opciones={opcionesSucursal}
+                          alCambiar={(v) => void accion(() => guardar(p.id, { sucursalId: v || null }), v ? 'Ahora es exclusivo de esa sucursal' : 'Ahora se vende en todas')}
+                          buscador={false}
+                          className="!bg-transparent hover:!bg-gris-150"
+                        />
+                      </td>
+                    )}
                     <td>
                       <Casilla etiqueta="En la carta" marcada={p.activo} alCambiar={(v) => void accion(() => guardar(p.id, { activo: v }))} />
                     </td>
@@ -236,7 +439,10 @@ function HojaProductos({ familias, recargar }: { familias: FamiliaAdmin[]; recar
           ))}
         </Tabla>
       </Panel>
-      <p className="mt-2 text-[12.5px] text-tinta-3">«Disponible» sin marcar = agotado por hoy: el mozo lo ve pero no puede pedirlo. «En carta» sin marcar = ya no se ofrece.</p>
+      <p className="mt-2 text-[12.5px] text-tinta-3">
+        «En carta» sin marcar = ya no se ofrece en ninguna sucursal.{variasSucursales && ' «Se vende en» deja un producto solo para una sucursal (un combo de inauguración).'} Los precios propios y los agotados de
+        cada sucursal van en la última hoja.
+      </p>
 
       <DialogoProducto
         abierto={nuevo}
@@ -264,8 +470,10 @@ function DialogoProducto({
   familias: FamiliaAdmin[]
   familiaInicial: number | null
   alCerrar: () => void
-  alGuardar: (d: { familiaId: number; variante: string; precio: number; codigo: string | null; nombre?: string }) => Promise<boolean>
+  alGuardar: (d: { familiaId: number; variante: string; precio: number; codigo: string | null; nombre?: string; sucursalId: number | null }) => Promise<boolean>
 }) {
+  const { sucursales } = useSucursal()
+  const [sucursalId, setSucursalId] = useState(0)
   const [familiaId, setFamiliaId] = useState<number | null>(familiaInicial)
   const [variante, setVariante] = useState('')
   const [nombre, setNombre] = useState('')
@@ -280,13 +488,21 @@ function DialogoProducto({
       setNombre('')
       setPrecio('')
       setCodigo('')
+      setSucursalId(0)
     }
   }
   const familia = familias.find((f) => f.id === familiaId)
   const valido = !!familiaId && variante.trim() && aCentimos(precio) > 0
   const guardar = async () => {
     if (!valido) return
-    const ok = await alGuardar({ familiaId: familiaId!, variante: variante.trim(), precio: aCentimos(precio), codigo: codigo.trim() || null, ...(nombre.trim() && { nombre: nombre.trim() }) })
+    const ok = await alGuardar({
+      familiaId: familiaId!,
+      variante: variante.trim(),
+      precio: aCentimos(precio),
+      codigo: codigo.trim() || null,
+      sucursalId: sucursalId || null,
+      ...(nombre.trim() && { nombre: nombre.trim() }),
+    })
     if (ok) alCerrar()
   }
   return (
@@ -328,6 +544,20 @@ function DialogoProducto({
             <input className="campo text-center uppercase" value={codigo} onChange={(e) => setCodigo(e.target.value.slice(0, 12))} placeholder="SH" />
           </label>
         </div>
+        {sucursales.length > 1 && (
+          <div className="grid gap-1.5 text-[13px] text-tinta-2">
+            Se vende en
+            <Desplegable
+              titulo="Se vende en"
+              estilo="campo"
+              valor={sucursalId}
+              opciones={[{ valor: 0, etiqueta: 'Todas las sucursales', icono: mdiViewGridOutline }, ...sucursales.map((s) => ({ valor: s.id, etiqueta: `Solo en ${s.nombre}`, icono: mdiStorefront }))]}
+              alCambiar={setSucursalId}
+              buscador={false}
+            />
+            <span className="text-[12.5px] text-tinta-3">Un combo o una promoción de una sola sucursal: las otras no lo ven.</span>
+          </div>
+        )}
       </div>
     </Dialogo>
   )

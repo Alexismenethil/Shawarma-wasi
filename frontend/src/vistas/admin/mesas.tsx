@@ -8,7 +8,8 @@ import { Boton } from '../../componentes/boton'
 import { Menu } from '../../componentes/desplegable'
 import { confirmar } from '../../componentes/dialogo'
 import { Icono } from '../../componentes/icono'
-import { CeldaEditable, Pagina, Panel, Tabla, useAccion } from './piezas'
+import { useSucursal } from '../../lib/sucursal'
+import { CeldaEditable, Pagina, Panel, RequiereSucursal, Tabla, useAccion } from './piezas'
 
 interface MesaAdmin {
   id: number
@@ -20,22 +21,25 @@ interface MesaAdmin {
 }
 
 /**
- * Las mesas del salón y los turnos para llevar: las pestañas M1…M25 y L1…L10
- * del Excel. Se agregan, se renumeran o se retiran; una mesa con ventas no se
- * borra (sus notas la nombran), se retira y puede volver.
+ * Las mesas del salón y los turnos para llevar de cada sucursal: las pestañas
+ * M1…M25 y L1…L10 del Excel. Se agregan, se renumeran o se retiran; una mesa
+ * con ventas no se borra (sus notas la nombran), se retira y puede volver.
  */
 export function Mesas() {
-  const { datos, recargar } = useRecurso<MesaAdmin[]>('/admin/mesas', (c) => !!c.mesas)
+  const { id, sucursal } = useSucursal()
+  const { datos, recargar } = useRecurso<MesaAdmin[]>(id ? '/admin/mesas' : null, (c) => !!c.mesas)
   const activas = datos?.filter((m) => m.activa) ?? []
   return (
     <Pagina
-      titulo="Mesas"
-      detalle={datos ? `${activas.filter((m) => m.tipo === 'SALON').length} mesas en el salón y ${activas.filter((m) => m.tipo === 'LLEVAR').length} para llevar` : 'cargando…'}
+      titulo={sucursal ? `Mesas · ${sucursal.nombre}` : 'Mesas'}
+      detalle={id && datos ? `${activas.filter((m) => m.tipo === 'SALON').length} mesas en el salón y ${activas.filter((m) => m.tipo === 'LLEVAR').length} para llevar` : 'cada sucursal tiene las suyas'}
     >
-      <div className="grid gap-4 xl:grid-cols-2">
-        <HojaMesas tipo="SALON" mesas={datos?.filter((m) => m.tipo === 'SALON') ?? []} recargar={recargar} />
-        <HojaMesas tipo="LLEVAR" mesas={datos?.filter((m) => m.tipo === 'LLEVAR') ?? []} recargar={recargar} />
-      </div>
+      <RequiereSucursal que="Las mesas">
+        <div className="grid gap-4 xl:grid-cols-2">
+          <HojaMesas tipo="SALON" mesas={datos?.filter((m) => m.tipo === 'SALON') ?? []} recargar={recargar} />
+          <HojaMesas tipo="LLEVAR" mesas={datos?.filter((m) => m.tipo === 'LLEVAR') ?? []} recargar={recargar} />
+        </div>
+      </RequiereSucursal>
     </Pagina>
   )
 }

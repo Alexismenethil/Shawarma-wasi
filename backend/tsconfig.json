@@ -17,6 +17,7 @@
     "src",
     "prisma",
     "test",
+    "scripts/**/*.ts",
     "prisma.config.ts"
   ]
 }

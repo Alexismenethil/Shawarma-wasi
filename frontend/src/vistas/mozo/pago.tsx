@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { mdiClose, mdiPlus } from '@mdi/js'
 import type { MedioPago, Pago } from '@wasi/shared'
+import { idAlAzar } from '../../lib/azar'
 import { soles } from '../../lib/formato'
 import { Desplegable } from '../../componentes/desplegable'
 import { Icono, iconoMedio } from '../../componentes/icono'
@@ -12,6 +13,8 @@ import { Icono, iconoMedio } from '../../componentes/icono'
  *   Vuelto / Debe                     6,00
  * Los pagos electrónicos van exactos; el efectivo cubre lo que falta y lo
  * que sobra es vuelto (la misma regla que aplica el servidor al cobrar).
+ * Solo cobra caja: para el mozo, en lugar del tipo de pago va «Se cobra en
+ * caja» con su botón para pedir la cuenta.
  */
 
 export interface FilaPago {
@@ -21,7 +24,7 @@ export interface FilaPago {
   monto: string
 }
 
-export const filaPagoVacia = (): FilaPago => ({ clave: crypto.randomUUID(), metodo: null, monto: '' })
+export const filaPagoVacia = (): FilaPago => ({ clave: idAlAzar(), metodo: null, monto: '' })
 
 /** «12,5» → 1250 céntimos. Vacío o inválido → 0. */
 export function aCentimos(texto: string) {
@@ -49,12 +52,12 @@ export function cuadrarPago(total: number, filas: FilaPago[], medios: MedioPago[
  * bajo la columna «Subtotal:»; en pantalla grande queda debajo la columna
  * «Estado:» para quitar un pago.
  */
-function Renglon({ etiqueta, monto, cola, className = '' }: { etiqueta: ReactNode; monto?: ReactNode; cola?: ReactNode; className?: string }) {
+export function Renglon({ etiqueta, monto, cola, compacto = false, className = '' }: { etiqueta: ReactNode; monto?: ReactNode; cola?: ReactNode; compacto?: boolean; className?: string }) {
   return (
     <div className={`flex min-h-11 items-stretch border-b border-reja ${className}`}>
       <div className="flex min-w-0 flex-1 items-center gap-2 px-3 py-1.5 text-[14px]">{etiqueta}</div>
-      <div className="flex w-[112px] shrink-0 items-center justify-end border-l border-reja px-2 text-[15px] tabular-nums lg:w-[90px] lg:text-[14px]">{monto}</div>
-      <div className="hidden w-[124px] shrink-0 items-center border-l border-reja px-1.5 lg:flex">{cola}</div>
+      <div className={`flex w-[112px] shrink-0 items-center justify-end border-l border-reja px-2 text-[15px] tabular-nums ${compacto ? '' : 'lg:w-[90px] lg:text-[14px]'}`}>{monto}</div>
+      {!compacto && <div className="hidden w-[124px] shrink-0 items-center border-l border-reja px-1.5 lg:flex">{cola}</div>}
     </div>
   )
 }
@@ -66,6 +69,8 @@ export function PieNota({
   medios,
   pagos,
   pagado,
+  sinCobro,
+  compacto = false,
 }: {
   total: number
   filas: FilaPago[]
@@ -74,6 +79,10 @@ export function PieNota({
   /** Lo ya cobrado: la nota pagada muestra sus pagos y no se vuelve a cobrar. */
   pagos: Pago[]
   pagado: boolean
+  /** Quien no cobra (o con la caja cerrada) ve esto en vez del tipo y monto de pago. */
+  sinCobro?: ReactNode
+  /** En un panel angosto (la caja): sin la columna «Estado:» de la nota. */
+  compacto?: boolean
 }) {
   const c = cuadrarPago(total, filas, medios)
   const opciones = medios.map((m) => ({ valor: m.clave, etiqueta: m.nombre, icono: iconoMedio(m) }))
@@ -85,7 +94,8 @@ export function PieNota({
   return (
     <div>
       <Renglon
-        etiqueta={<span className="w-full text-right font-medium lg:text-center">Monto Total:</span>}
+        compacto={compacto}
+        etiqueta={<span className={`w-full text-right font-medium ${compacto ? '' : 'lg:text-center'}`}>Monto Total:</span>}
         monto={<b className="text-[17px] font-bold lg:text-[15px]">{soles(total)}</b>}
       />
 
@@ -94,6 +104,7 @@ export function PieNota({
           {pagos.map((g) => (
             <Renglon
               key={g.id}
+              compacto={compacto}
               etiqueta={
                 <>
                   <span className="hidden text-tinta-2 sm:inline">Tipo y Monto de Pago:</span>
@@ -107,12 +118,15 @@ export function PieNota({
           ))}
           {vuelto > 0 && (
             <Renglon
+              compacto={compacto}
               className="bg-menta-suave"
-              etiqueta={<span className="w-full text-right font-medium text-verde-2 lg:text-center">Vuelto</span>}
+              etiqueta={<span className={`w-full text-right font-medium text-verde-2 ${compacto ? '' : 'lg:text-center'}`}>Vuelto</span>}
               monto={<b className="text-verde-2">{soles(vuelto)}</b>}
             />
           )}
         </>
+      ) : sinCobro ? (
+        sinCobro
       ) : (
         <>
           {filas.map((f, i) => {
@@ -125,9 +139,10 @@ export function PieNota({
             return (
               <Renglon
                 key={f.clave}
+                compacto={compacto}
                 etiqueta={
                   <>
-                    <span className="hidden shrink-0 text-tinta-2 sm:inline">Tipo y Monto de Pago:</span>
+                    <span className={`hidden shrink-0 text-tinta-2 ${compacto ? '' : 'sm:inline'}`}>Tipo y Monto de Pago:</span>
                     <span className="w-full max-w-[240px] min-w-0">
                       <Desplegable
                         titulo="Tipo de pago"
@@ -155,10 +170,10 @@ export function PieNota({
                     {i === filas.length - 1 && filas.length < 4 && f.metodo && (
                       <button onClick={() => setFilas([...filas, filaPagoVacia()])} title="Repartir la cuenta entre dos medios" className="flex h-8 shrink-0 items-center gap-1 px-1.5 text-[13px] text-azul hover:bg-azul-suave">
                         <Icono d={mdiPlus} className="size-4" />
-                        <span className="hidden sm:inline">Otro pago</span>
+                        <span className={compacto ? 'hidden' : 'hidden sm:inline'}>Otro pago</span>
                       </button>
                     )}
-                    <span className="lg:hidden">{quitar}</span>
+                    <span className={compacto ? '' : 'lg:hidden'}>{quitar}</span>
                   </>
                 }
                 monto={
@@ -176,7 +191,7 @@ export function PieNota({
               />
             )
           })}
-          <ResultadoPago c={c} />
+          <ResultadoPago c={c} compacto={compacto} />
         </>
       )}
     </div>
@@ -184,19 +199,21 @@ export function PieNota({
 }
 
 /** El renglón que el Excel calculaba con una fórmula: «Vuelto», «Debe» o nada. */
-function ResultadoPago({ c }: { c: ReturnType<typeof cuadrarPago> }) {
+function ResultadoPago({ c, compacto }: { c: ReturnType<typeof cuadrarPago>; compacto: boolean }) {
+  const centro = compacto ? '' : 'lg:text-center'
   if (!c.usadas.length) {
-    return <Renglon etiqueta={<span className="w-full text-right text-[13px] text-tinta-3 lg:text-center">Elige el tipo de pago cuando el cliente pague</span>} />
+    return <Renglon compacto={compacto} etiqueta={<span className={`w-full text-right text-[13px] text-tinta-3 ${centro}`}>Elige el tipo de pago cuando el cliente pague</span>} />
   }
   if (c.excedeElectronico) {
-    return <Renglon className="bg-rosa" etiqueta={<span className="w-full text-right font-medium text-rojo-oscuro lg:text-center">El pago electrónico supera el total</span>} />
+    return <Renglon compacto={compacto} className="bg-rosa" etiqueta={<span className={`w-full text-right font-medium text-rojo-oscuro ${centro}`}>El pago electrónico supera el total</span>} />
   }
   const debe = c.debe > 0
   const tono = debe ? 'text-rojo-oscuro' : 'text-verde-2'
   return (
     <Renglon
+      compacto={compacto}
       className={debe ? 'bg-rosa' : c.vuelto ? 'bg-menta-suave' : ''}
-      etiqueta={<span className={`w-full text-right font-medium lg:text-center ${tono}`}>{debe ? 'Debe' : c.vuelto ? 'Vuelto' : 'Pago completo'}</span>}
+      etiqueta={<span className={`w-full text-right font-medium ${centro} ${tono}`}>{debe ? 'Debe' : c.vuelto ? 'Vuelto' : 'Pago completo'}</span>}
       monto={<b className={tono}>{debe ? soles(c.debe) : c.vuelto ? soles(c.vuelto) : ''}</b>}
     />
   )

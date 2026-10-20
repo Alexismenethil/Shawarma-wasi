@@ -1,9 +1,15 @@
 node_modules
 dist
 .env
-.env.local
+.env.*
+!.env.example
 *.log
 .DS_Store
 backend/src/generated
 frontend/.vite
 e2e/resultados
+# Las cuentas que escribe la semilla: privadas
+*.local.md
+# Respaldos de la base (npm run db:respaldo): privados
+respaldos/
+.vercel/

@@ -3,30 +3,50 @@ import { prisma } from '../db.js'
 import { ErrorNegocio } from '../errores.js'
 import { recordar } from '../memoria.js'
 import { avisar } from '../tiempo-real.js'
+import { agotanJuntas } from './cocina-compartida.js'
 
 /**
  * La carta: la hoja «Productos» del Excel (familia + variante + precio), la
  * hoja «Adicional» y la hoja «Detalle». La manda el panel de administración,
  * no el código: la semilla solo la carga la primera vez.
+ *
+ * Es una sola para todas las sucursales. Cada sucursal puede tener lo suyo:
+ * un precio propio, productos que no ofrece, lo que se le agotó hoy
+ * (ProductoSucursal) y productos que solo vende ella (el combo de
+ * inauguración de un local nuevo).
  */
 
-/** La carta de los mozos se lee de la base solo cuando cambia (ver memoria.ts). */
-export function cartaParaMozo(): Promise<Carta> {
-  return recordar('carta', leerCarta)
+/** La carta de los mozos de una sucursal se lee de la base solo cuando cambia (ver memoria.ts). */
+export function cartaParaMozo(sucursalId: number): Promise<Carta> {
+  return recordar(`carta:${sucursalId}`, () => leerCarta(sucursalId))
 }
 
-async function leerCarta(): Promise<Carta> {
+/** Lo que vale y si se puede pedir un producto en una sucursal. */
+export function enLaSucursal(p: { precio: number; enSucursal: { precio: number | null; oculto: boolean; agotado: boolean }[] }) {
+  const propio = p.enSucursal[0]
+  return { precio: propio?.precio ?? p.precio, ofrecido: !propio?.oculto, disponible: !propio?.agotado }
+}
+
+/** Los productos que una sucursal ofrece: los de todas más los suyos, con lo propio de ella. */
+export const deLaSucursal = (sucursalId: number) => ({
+  where: { activo: true, OR: [{ sucursalId: null }, { sucursalId }] },
+  include: { enSucursal: { where: { sucursalId } } },
+})
+
+async function leerCarta(sucursalId: number): Promise<Carta> {
+  const productos = deLaSucursal(sucursalId)
   const [familias, adicionales, detalles] = await Promise.all([
     prisma.familia.findMany({
       where: { activa: true },
       orderBy: { orden: 'asc' },
-      include: { productos: { where: { activo: true }, orderBy: { orden: 'asc' } } },
+      include: { productos: { ...productos, orderBy: { orden: 'asc' } } },
     }),
     prisma.adicional.findMany({ where: { activo: true }, orderBy: { orden: 'asc' } }),
     prisma.detalle.findMany({ where: { activo: true }, orderBy: [{ orden: 'asc' }, { id: 'asc' }] }),
   ])
   return {
     familias: familias
+      .map((f) => ({ ...f, productos: f.productos.map((p) => ({ ...p, ...enLaSucursal(p) })).filter((p) => p.ofrecido) }))
       .filter((f) => f.productos.length > 0)
       .map((f) => ({
         id: f.id,
@@ -58,12 +78,22 @@ async function leerCarta(): Promise<Carta> {
   }
 }
 
-export async function cartaAdmin() {
+/**
+ * La carta del panel. Con una sucursal elegida, cada producto trae además lo
+ * propio de esa sucursal (`enSucursal`): su precio, si lo ofrece y si se agotó.
+ */
+export async function cartaAdmin(sucursalId: number | null) {
   const [familias, adicionales] = await Promise.all([
     prisma.familia.findMany({
       orderBy: { orden: 'asc' },
       include: {
-        productos: { orderBy: { orden: 'asc' }, include: { _count: { select: { items: true, receta: true } } } },
+        productos: {
+          orderBy: { orden: 'asc' },
+          include: {
+            _count: { select: { items: true, receta: true } },
+            enSucursal: { where: { sucursalId: sucursalId ?? -1 } },
+          },
+        },
       },
     }),
     prisma.adicional.findMany({ orderBy: { orden: 'asc' } }),
@@ -71,7 +101,12 @@ export async function cartaAdmin() {
   return {
     familias: familias.map(({ productos, ...f }) => ({
       ...f,
-      productos: productos.map(({ _count, ...p }) => ({ ...p, vendidos: _count.items, conReceta: _count.receta > 0 })),
+      productos: productos.map(({ _count, enSucursal, ...p }) => ({
+        ...p,
+        vendidos: _count.items,
+        conReceta: _count.receta > 0,
+        enSucursal: sucursalId ? { precio: enSucursal[0]?.precio ?? null, oculto: !!enSucursal[0]?.oculto, agotado: !!enSucursal[0]?.agotado } : null,
+      })),
     })),
     adicionales,
   }
@@ -92,7 +127,42 @@ type DatosProducto = {
   descripcion: string | null
   precio: number
   activo: boolean
-  disponible: boolean
+  /** null = en todas las sucursales; con valor, solo en esa. */
+  sucursalId: number | null
+}
+
+async function exigirSucursal(id: number | null | undefined) {
+  if (id && !(await prisma.sucursal.findUnique({ where: { id } }))) throw new ErrorNegocio('Esa sucursal no existe.', 404)
+}
+
+/**
+ * Lo propio de un producto en una sucursal. Lo que vuelve a ser como la carta
+ * (precio de carta, ofrecido, disponible) borra la fila: sin fila, rige la carta.
+ */
+export async function ajustarEnSucursal(productoId: number, sucursalId: number, d: Partial<{ precio: number | null; oculto: boolean; agotado: boolean }>) {
+  const producto = await prisma.producto.findUnique({ where: { id: productoId }, include: { familia: { select: { estacion: true } } } })
+  if (!producto) throw new ErrorNegocio('Ese producto no existe.', 404)
+  await exigirSucursal(sucursalId)
+  const nuevo = await ajustarUna(producto, sucursalId, d)
+  // Cocina compartida: lo que se acaba en esa cocina se acaba en todas las sucursales que la usan.
+  const tambien = d.agotado === undefined ? [] : (await agotanJuntas(sucursalId, producto.familia.estacion)).filter((s) => !producto.sucursalId || producto.sucursalId === s.id)
+  for (const s of tambien) await ajustarUna(producto, s.id, { agotado: d.agotado })
+  avisarCarta()
+  return { ...nuevo, tambienEn: tambien.map((s) => s.nombre) }
+}
+
+async function ajustarUna(producto: { id: number; precio: number }, sucursalId: number, d: Partial<{ precio: number | null; oculto: boolean; agotado: boolean }>) {
+  const llave = { productoId_sucursalId: { productoId: producto.id, sucursalId } }
+  const actual = await prisma.productoSucursal.findUnique({ where: llave })
+  const nuevo = { precio: actual?.precio ?? null, oculto: actual?.oculto ?? false, agotado: actual?.agotado ?? false, ...d }
+  // Escribir el mismo precio de la carta es volver a la carta.
+  if (nuevo.precio === producto.precio) nuevo.precio = null
+  if (nuevo.precio === null && !nuevo.oculto && !nuevo.agotado) {
+    if (actual) await prisma.productoSucursal.delete({ where: llave })
+  } else {
+    await prisma.productoSucursal.upsert({ where: llave, update: nuevo, create: { productoId: producto.id, sucursalId, ...nuevo } })
+  }
+  return nuevo
 }
 
 async function exigirVarianteLibre(familiaId: number, variante: string, salvo?: number) {
@@ -107,6 +177,7 @@ export async function actualizarProducto(id: number, datos: Partial<DatosProduct
   if (variante || datos.familiaId) {
     await exigirVarianteLibre(datos.familiaId ?? actual.familiaId, variante ?? actual.variante, id)
   }
+  await exigirSucursal(datos.sucursalId)
   const actualizado = await prisma.producto.update({
     where: { id },
     data: {
@@ -121,11 +192,20 @@ export async function actualizarProducto(id: number, datos: Partial<DatosProduct
   return actualizado
 }
 
-export async function crearProducto(datos: { familiaId: number; variante: string; nombre?: string; precio: number; codigo?: string | null; descripcion?: string | null }) {
+export async function crearProducto(datos: {
+  familiaId: number
+  variante: string
+  nombre?: string
+  precio: number
+  codigo?: string | null
+  descripcion?: string | null
+  sucursalId?: number | null
+}) {
   const familia = await prisma.familia.findUnique({ where: { id: datos.familiaId } })
   if (!familia) throw new ErrorNegocio('Esa familia no existe.', 404)
   const variante = datos.variante.trim()
   await exigirVarianteLibre(familia.id, variante)
+  await exigirSucursal(datos.sucursalId)
   const orden = ((await prisma.producto.aggregate({ where: { familiaId: familia.id }, _max: { orden: true } }))._max.orden ?? 0) + 1
   const creado = await prisma.producto.create({
     data: {
@@ -136,6 +216,7 @@ export async function crearProducto(datos: { familiaId: number; variante: string
       nombre: datos.nombre?.trim() || `${familia.clave.replace(/-/g, ' ')} ${variante}`,
       descripcion: limpio(datos.descripcion) ?? null,
       precio: datos.precio,
+      sucursalId: datos.sucursalId ?? null,
       orden,
     },
   })

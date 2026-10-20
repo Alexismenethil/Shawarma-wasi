@@ -10,3 +10,5 @@ doc
 e2e/resultados
 *.log
 .DS_Store
+*.local.md
+respaldos

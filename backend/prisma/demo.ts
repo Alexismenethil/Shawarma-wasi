@@ -2,9 +2,10 @@ import type { Estacion, Prisma } from '@prisma/client'
 import { prisma } from '../src/db.js'
 
 /**
- * Datos de muestra para ver los reportes con vida: cinco semanas de ventas y
- * unas cuantas mesas ocupadas ahora mismo. Solo para desarrollo — se niega a
- * correr si la base ya tiene pedidos, salvo con --forzar.
+ * Datos de muestra para ver los reportes con vida: cinco semanas de ventas en
+ * cada sucursal, cada día con su caja (apertura, gastos, cierre con su
+ * arqueo) y unas cuantas mesas ocupadas ahora mismo. Solo para desarrollo — se
+ * niega a correr si la base ya tiene pedidos, salvo con --forzar.
  */
 
 const forzar = process.argv.includes('--forzar')
@@ -26,10 +27,9 @@ const elegir = <T>(xs: [T, number][]): T => {
   return xs[0][0]
 }
 
-const productos = await prisma.producto.findMany({ include: { familia: true } })
-const mesas = await prisma.mesa.findMany()
-const mozo = await prisma.usuario.findFirstOrThrow({ where: { rol: 'MOZO' } })
+const productos = await prisma.producto.findMany({ where: { activo: true, sucursalId: null }, include: { familia: true } })
 const adicionales = await prisma.adicional.findMany()
+const sucursales = await prisma.sucursal.findMany({ where: { activa: true }, orderBy: { id: 'asc' } })
 
 // Cuánto se pide cada familia: el shawarma manda, el emoliente lo acompaña.
 const PESO: Record<string, number> = {
@@ -44,6 +44,7 @@ const familiasPeso = [...porFamilia.keys()].map((k) => [k, PESO[k] ?? 1] as [str
 const OBS = ['Sin ají', 'Sin cebolla', 'Poca crema', 'Bien caliente', 'Sin ensalada', 'Extra ají']
 const DETALLES = (await prisma.detalle.findMany({ where: { activo: true } })).map((d) => d.nombre)
 const CLIENTES = ['Rosa', 'Jhon', 'Maribel', 'Kevin', 'Luz', 'Diego', 'Yesenia', 'Alexis', 'Carmen', 'Wilber']
+const GASTOS: [string, number][] = [['Compra de gas', 4500], ['Pan pita del día', 1800], ['Limones y verduras', 2500], ['Bolsas y tápers', 1500], ['Movilidad', 800]]
 
 function lineaAlAzar() {
   const familia = elegir(familiasPeso)
@@ -78,7 +79,11 @@ const ahoraMin = (() => {
   return h * 60 + m
 })()
 
-async function venta(fecha: string, minuto: number) {
+type Personal = { mozo: { id: number }; cajero: { id: number } }
+type Mesa = Awaited<ReturnType<typeof prisma.mesa.findMany>>[number]
+
+/** Una venta cobrada en la caja del día; devuelve lo que entró en efectivo. */
+async function venta(sucursalId: number, mesas: Mesa[], personal: Personal, cajaId: number, fecha: string, minuto: number) {
   const mesa = mesas[entre(0, mesas.length - 1)]
   const lineas = Array.from({ length: entre(1, 5) }, lineaAlAzar)
   const total = lineas.reduce((s, l) => s + l.subtotal, 0)
@@ -94,8 +99,10 @@ async function venta(fecha: string, minuto: number) {
       : [{ metodo, monto: total, recibido: metodo === 'EFECTIVO' ? Math.ceil(total / 1000) * 1000 : null }]
   await prisma.pedido.create({
     data: {
+      sucursalId,
       mesaId: mesa.id,
-      mozoId: mozo.id,
+      mozoId: personal.mozo.id,
+      cobradoPorId: personal.cajero.id,
       cliente: mesa.tipo === 'LLEVAR' ? CLIENTES[entre(0, CLIENTES.length - 1)] : null,
       estado: 'COBRADO',
       total,
@@ -111,40 +118,67 @@ async function venta(fecha: string, minuto: number) {
           entregadoEn: enLima(fecha, minuto + entre(16, 20)),
         })),
       },
-      pagos: { create: pagos.map((g) => ({ ...g, creadoEn: cobrado })) },
+      pagos: { create: pagos.map((g) => ({ ...g, cajaId, creadoEn: cobrado })) },
     },
   })
+  return pagos.filter((g) => g.metodo === 'EFECTIVO').reduce((s, g) => s + g.monto, 0)
 }
 
-console.log('\n  Shawarma Wasi · datos de muestra')
-let ventas = 0
-for (let d = 34; d >= 0; d--) {
-  const dia = new Date(Date.parse(`${hoy}T12:00:00Z`) - d * 86_400_000).toISOString().slice(0, 10)
-  const semana = new Date(`${dia}T12:00:00Z`).getUTCDay()
-  if (semana === 1 && azar() < 0.6) continue // algunos lunes no se abre
-  const base = semana === 5 || semana === 6 ? 52 : semana === 0 ? 44 : 30
-  const cuantos = d === 0 ? Math.max(0, Math.round(base * Math.min(1, (ahoraMin - 660) / 690))) : entre(base - 8, base + 10)
+/** Un día de una sucursal: abre la caja, vende, anota algún gasto y (si el día ya pasó) cierra con su arqueo. */
+async function dia(sucursalId: number, mesas: Mesa[], personal: Personal, fecha: string, cuantos: number, hoyEs: boolean) {
+  const FONDO = 10000
+  const abiertaEn = enLima(fecha, 630)
+  if (hoyEs && ahoraMin < 640) return 0
+  const caja = await prisma.caja.create({ data: { sucursalId, abiertaPorId: personal.cajero.id, abiertaEn, montoInicial: FONDO } })
+  await prisma.eventoCaja.create({ data: { cajaId: caja.id, tipo: 'APERTURA', usuarioId: personal.cajero.id, creadoEn: abiertaEn, monto: FONDO } })
+
+  let efectivo = 0
+  let ventas = 0
   for (let i = 0; i < cuantos; i++) {
     // Dos picos: almuerzo y, sobre todo, la noche.
     const minuto = elegir([[entre(690, 900), 35], [entre(900, 1080), 15], [entre(1080, 1350), 50]])
-    if (d === 0 && minuto > ahoraMin - 30) continue
-    await venta(dia, minuto)
+    if (hoyEs && minuto > ahoraMin - 30) continue
+    efectivo += await venta(sucursalId, mesas, personal, caja.id, fecha, minuto)
     ventas++
   }
+
+  let egresos = 0
+  if (azar() < 0.45) {
+    const [concepto, monto] = GASTOS[entre(0, GASTOS.length - 1)]
+    egresos += monto
+    await prisma.movimientoCaja.create({ data: { cajaId: caja.id, tipo: 'EGRESO', monto, concepto, usuarioId: personal.cajero.id, creadoEn: enLima(fecha, entre(700, 1000)) } })
+  }
+
+  if (!hoyEs) {
+    const esperado = FONDO + efectivo - egresos
+    // Casi siempre cuadra; a veces falta o sobra un poco de sencillo.
+    const diferencia = azar() < 0.72 ? 0 : elegir<number>([[-200, 3], [-50, 3], [100, 2], [-1000, 1], [50, 2]])
+    const contado = esperado + diferencia
+    const cerradaEn = enLima(fecha, 1390)
+    await prisma.caja.update({
+      where: { id: caja.id },
+      data: { estado: 'CERRADA', cerradaPorId: personal.cajero.id, cerradaEn, esperado, contado, fondoSiguiente: FONDO, observacion: diferencia < -500 ? 'Faltó un billete de S/ 10: se revisa con el turno.' : null },
+    })
+    await prisma.eventoCaja.create({ data: { cajaId: caja.id, tipo: 'CIERRE', usuarioId: personal.cajero.id, creadoEn: cerradaEn, monto: contado, diferencia } })
+  }
+  return ventas
 }
 
 // Ahora mismo: mesas en distintos momentos de la noche.
-async function mesaAbierta(numero: number, tipo: 'SALON' | 'LLEVAR', hace: number, estado: 'PENDIENTE' | 'LISTO' | 'ENTREGADO', cliente?: string) {
-  const mesa = mesas.find((m) => m.numero === numero && m.tipo === tipo)!
+async function mesaAbierta(sucursalId: number, mesas: Mesa[], personal: Personal, numero: number, tipo: 'SALON' | 'LLEVAR', hace: number, estado: 'PENDIENTE' | 'LISTO' | 'ENTREGADO', cliente?: string) {
+  const mesa = mesas.find((m) => m.numero === numero && m.tipo === tipo)
+  if (!mesa) return
   const lineas = Array.from({ length: entre(2, 4) }, lineaAlAzar)
   const creado = new Date(Date.now() - hace * 60_000)
   await prisma.pedido.create({
     data: {
+      sucursalId,
       mesaId: mesa.id,
-      mozoId: mozo.id,
+      mozoId: personal.mozo.id,
       cliente: cliente ?? null,
       total: lineas.reduce((s, l) => s + l.subtotal, 0),
       creadoEn: creado,
+      cuentaPedidaEn: estado === 'ENTREGADO' && hace > 40 ? new Date(Date.now() - 4 * 60_000) : null,
       items: {
         create: lineas.map((l, i) => ({
           ...l,
@@ -159,14 +193,36 @@ async function mesaAbierta(numero: number, tipo: 'SALON' | 'LLEVAR', hace: numbe
     },
   })
 }
-await mesaAbierta(3, 'SALON', 6, 'PENDIENTE')
-await mesaAbierta(7, 'SALON', 14, 'PENDIENTE')
-await mesaAbierta(8, 'SALON', 21, 'LISTO')
-await mesaAbierta(12, 'SALON', 38, 'ENTREGADO')
-await mesaAbierta(15, 'SALON', 3, 'PENDIENTE')
-await mesaAbierta(19, 'SALON', 44, 'ENTREGADO')
-await mesaAbierta(2, 'LLEVAR', 9, 'PENDIENTE', 'Maribel')
-await mesaAbierta(4, 'LLEVAR', 17, 'LISTO', 'Kevin')
+
+console.log('\n  Shawarma Wasi · datos de muestra')
+for (const [k, s] of sucursales.entries()) {
+  const mesas = await prisma.mesa.findMany({ where: { sucursalId: s.id, activa: true } })
+  const mozo = await prisma.usuario.findFirst({ where: { sucursalId: s.id, rol: 'MOZO', activo: true } })
+  const cajero = (await prisma.usuario.findFirst({ where: { sucursalId: s.id, rol: 'CAJA', activo: true } })) ?? mozo
+  if (!mesas.length || !mozo || !cajero) {
+    console.log(`  ${s.nombre}: sin mesas o sin mozo, se salta`)
+    continue
+  }
+  const personal = { mozo, cajero }
+  // La primera sucursal es la de más movimiento; las demás venden algo menos.
+  const escala = k === 0 ? 1 : 0.6
+  let ventas = 0
+  for (let d = 34; d >= 0; d--) {
+    const fecha = new Date(Date.parse(`${hoy}T12:00:00Z`) - d * 86_400_000).toISOString().slice(0, 10)
+    const semana = new Date(`${fecha}T12:00:00Z`).getUTCDay()
+    if (semana === 1 && azar() < 0.6) continue // algunos lunes no se abre
+    const base = (semana === 5 || semana === 6 ? 52 : semana === 0 ? 44 : 30) * escala
+    const cuantos = d === 0 ? Math.max(0, Math.round(base * Math.min(1, (ahoraMin - 660) / 690))) : entre(Math.round(base - 8 * escala), Math.round(base + 10 * escala))
+    ventas += await dia(s.id, mesas, personal, fecha, cuantos, d === 0)
+  }
+  await mesaAbierta(s.id, mesas, personal, 3, 'SALON', 6, 'PENDIENTE')
+  await mesaAbierta(s.id, mesas, personal, 7, 'SALON', 14, 'PENDIENTE')
+  await mesaAbierta(s.id, mesas, personal, 8, 'SALON', 21, 'LISTO')
+  await mesaAbierta(s.id, mesas, personal, 12, 'SALON', 48, 'ENTREGADO')
+  await mesaAbierta(s.id, mesas, personal, 2, 'LLEVAR', 9, 'PENDIENTE', 'Maribel')
+  await mesaAbierta(s.id, mesas, personal, 4, 'LLEVAR', 17, 'LISTO', 'Kevin')
+  console.log(`  ${s.nombre}: ${ventas} ventas en cinco semanas, cada día con su caja, y 6 notas abiertas`)
+}
 
 await prisma.$disconnect()
-console.log(`  ${ventas} ventas en cinco semanas y 8 notas abiertas\n`)
+console.log('')

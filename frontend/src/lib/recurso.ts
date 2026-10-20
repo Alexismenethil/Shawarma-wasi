@@ -2,16 +2,19 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Cambio } from '@wasi/shared'
 import { api } from './api'
 import { useCambios } from './tiempo-real'
+import { useVista } from './sucursal'
 
 /**
  * Datos del servidor que se mantienen solos al día: se piden al montar, al
- * volver a la pestaña y cada vez que el socket avisa un cambio que les toca.
+ * volver a la pestaña, cada vez que el socket avisa un cambio que les toca y
+ * cuando el administrador cambia de sucursal.
  */
 export function useRecurso<T>(ruta: string | null, leTocaElCambio: (c: Cambio) => boolean = () => true) {
   const [datos, setDatos] = useState<T | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const vigente = useRef(0)
+  const vista = useVista()
 
   const recargar = useCallback(async () => {
     if (!ruta) return
@@ -27,7 +30,8 @@ export function useRecurso<T>(ruta: string | null, leTocaElCambio: (c: Cambio) =
     } finally {
       if (turno === vigente.current) setCargando(false)
     }
-  }, [ruta])
+    // La sucursal viaja en la cabecera, no en la ruta: al cambiarla, se vuelve a pedir.
+  }, [ruta, vista])
 
   useEffect(() => {
     setCargando(true)

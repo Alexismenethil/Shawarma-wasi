@@ -38,7 +38,7 @@ export function Avisos() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+116px)] z-[90] flex flex-col items-center gap-2 px-3 sm:right-5 sm:bottom-16 sm:left-auto sm:items-end"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+116px)] z-[90] flex flex-col items-center gap-2 px-3 sm:right-5 sm:bottom-16 sm:left-auto sm:items-end print:hidden"
     >
       <AnimatePresence>
         {lista.map((a) => (

@@ -1,8 +1,9 @@
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { motion } from 'motion/react'
-import { mdiCheckBold, mdiChevronRight } from '@mdi/js'
+import { mdiCheckBold, mdiChevronRight, mdiStorefront } from '@mdi/js'
 import { soles } from '../../lib/formato'
+import { elegirVista, useSucursal } from '../../lib/sucursal'
 import { avisar } from '../../componentes/avisos'
 import { Rueda } from '../../componentes/boton'
 import { Icono } from '../../componentes/icono'
@@ -340,6 +341,30 @@ export function PestanasPagina<T extends string>({
           </button>
         )
       })}
+    </div>
+  )
+}
+
+/**
+ * Lo que es de una sola sucursal (sus mesas, sus agotados): con «Todas las
+ * sucursales» elegidas, primero se elige cuál.
+ */
+export function RequiereSucursal({ que, children }: { que: string; children: ReactNode }) {
+  const { id, sucursales } = useSucursal()
+  if (id) return <>{children}</>
+  return (
+    <div className="hoja sombra-hoja max-w-[560px]">
+      <div className="flex items-center gap-3 border-b border-reja px-4 py-3">
+        <Icono d={mdiStorefront} className="size-6 text-verde-2" />
+        <p className="text-[14.5px] text-tinta">{que} son de cada sucursal. ¿De cuál?</p>
+      </div>
+      <div className="flex flex-wrap gap-2 p-4">
+        {sucursales.map((s) => (
+          <button key={s.id} onClick={() => elegirVista(s.id)} className="boton boton-claro h-11 min-w-36">
+            <Icono d={mdiStorefront} className="size-[18px] text-verde-2" /> {s.nombre}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { codigoMesa } from '@wasi/shared'
 import { descargar } from '../../lib/api'
 import { useRecurso } from '../../lib/recurso'
 import { useAjustes } from '../../lib/ajustes'
+import { useSucursal } from '../../lib/sucursal'
 import { fechaCorta, hora, soles } from '../../lib/formato'
 import { avisar } from '../../componentes/avisos'
 import { Boton } from '../../componentes/boton'
@@ -23,6 +24,8 @@ const POR_PAGINA = 100
  * cuenta todo lo filtrado) y la descarga para Excel trae todo desde el servidor.
  */
 export function Consolidado() {
+  const { id: vista, sucursales } = useSucursal()
+  const todas = !vista && sucursales.length > 1
   const rango = useRango('7')
   const { medios } = useAjustes()
   const [q, setQ] = useState('')
@@ -99,6 +102,7 @@ export function Consolidado() {
           tono="rojo"
           alto="calc(100dvh - 260px)"
           columnas={[
+            ...(todas ? [{ titulo: 'Sucursal', ancho: '110px' }] : []),
             { titulo: 'Nro', ancho: '58px' },
             { titulo: 'Cant:', ancho: '50px' },
             { titulo: 'Producto:', ancho: '190px' },
@@ -122,6 +126,7 @@ export function Consolidado() {
             return (
               <Fragment key={f.id}>
                 <tr className={primera ? '[&>td]:border-t-2 [&>td]:border-t-tinta-4' : ''}>
+                  {todas && <td className="truncate text-tinta-2">{primera && f.sucursal}</td>}
                   <td className="text-center text-tinta-2 tabular-nums">{primera && f.pedidoId}</td>
                   <td className="text-center tabular-nums">{f.cantidad}</td>
                   <td className="max-w-[210px] truncate">{f.nombre}</td>
@@ -143,7 +148,7 @@ export function Consolidado() {
           })}
           {filas && !filas.length && (
             <tr>
-              <td colSpan={15} className="h-24 text-center text-tinta-3">
+              <td colSpan={todas ? 16 : 15} className="h-24 text-center text-tinta-3">
                 Nada coincide con el filtro.
               </td>
             </tr>

@@ -1,9 +1,10 @@
 import { createContext, useContext, useMemo } from 'react'
 import { Link, Outlet, useParams } from 'react-router'
-import { mdiViewGrid } from '@mdi/js'
+import { mdiCashRegister, mdiViewGrid } from '@mdi/js'
 import type { Carta, MesaResumen } from '@wasi/shared'
-import { codigoMesa, nombreMesa } from '@wasi/shared'
+import { codigoMesa, nombreMesa, puedeEntrar } from '@wasi/shared'
 import { useRecurso } from '../../lib/recurso'
+import { useSesion } from '../../lib/sesion'
 import { useCambios } from '../../lib/tiempo-real'
 import { useMesasConBorrador } from '../../lib/borrador'
 import { sonarListo } from '../../lib/sonido'
@@ -37,6 +38,8 @@ export function estadoHoja(m: MesaResumen, conBorrador: Set<number>): EstadoHoja
 
 export function LibroMozo() {
   const { mesaId } = useParams()
+  const sesion = useSesion()
+  const vaACaja = !!sesion && puedeEntrar(sesion.usuario.rol, 'CAJA')
   const { datos: mesas, error } = useRecurso<MesaResumen[]>('/mesas', (c) => !!c.mesas)
   const { datos: carta } = useRecurso<Carta>('/carta', (c) => !!c.carta)
   const conBorrador = useMesasConBorrador()
@@ -45,7 +48,8 @@ export function LibroMozo() {
   useCambios((c) => {
     if (c.aviso?.tipo === 'listo') {
       sonarListo()
-      avisar(`${c.aviso.mesa}: cocina atendió el pedido`, 'info')
+      // Con la cocina compartida, el plato sale en el otro local: se dice dónde recogerlo.
+      avisar(`${c.aviso.mesa}: cocina atendió el pedido${c.aviso.en ? ` · recógelo en ${c.aviso.en}` : ''}`, 'info')
     }
   })
 
@@ -71,7 +75,17 @@ export function LibroMozo() {
   return (
     <Contexto.Provider value={valor}>
       <div className="min-h-dvh pb-[calc(44px+env(safe-area-inset-bottom))]">
-        <Barra titulo={mesa ? `Nota de Pedido · ${nombreMesa(mesa)}` : 'Mesas del local'} />
+        <Barra
+          titulo={mesa ? `Nota de Pedido · ${nombreMesa(mesa)}` : 'Mesas del local'}
+          derecha={
+            vaACaja && (
+              <Link to="/caja" title="Ir a caja" className="flex h-9 items-center gap-1.5 border border-white/30 px-2.5 text-[13px] text-white hover:bg-white/10">
+                <Icono d={mdiCashRegister} className="size-[18px]" />
+                <span className="hidden sm:inline">Caja</span>
+              </Link>
+            )
+          }
+        />
         <Outlet />
       </div>
       <Pestanas

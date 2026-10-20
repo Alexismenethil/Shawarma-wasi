@@ -5,22 +5,21 @@ import { api } from './api'
 import { useCambios } from './tiempo-real'
 
 /**
- * Los datos del local (nombre, cocinas, medios de pago, observaciones), uno
- * solo para toda la pestaña. Se piden una vez y se renuevan cuando el panel
+ * Los datos del negocio (nombre, sucursales, cocinas, medios de pago,
+ * observaciones), uno solo para toda la pestaña. Se piden una vez y se renuevan cuando el panel
  * de Administración avisa un cambio.
  */
 
 const RESPALDO: Ajustes = {
   nombre: 'Shawarma Wasi',
   subtitulo: 'Peruvian Cuisine',
-  direccion: '',
-  telefono: '',
   ruc: '',
   pieNota: '',
   estaciones: ESTACION_POR_DEFECTO,
   observaciones: [],
   minutosAlerta: 15,
   medios: [],
+  sucursales: [],
 }
 
 let actual: Ajustes | null = null

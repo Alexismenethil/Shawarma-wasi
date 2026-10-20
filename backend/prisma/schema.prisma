@@ -4,13 +4,16 @@
 // mesa o un pedido para llevar, la hoja Productos es la carta, Adicional los
 // extras, Detalle los cortes, y Consolidado/Arqueo son los pedidos ya cobrados.
 //
-// Tres reglas que atraviesan todo el modelo:
+// Cuatro reglas que atraviesan todo el modelo:
 //  1. El dinero son céntimos enteros. S/ 4.50 se guarda como 450.
 //  2. Los ítems guardan copia congelada del nombre y el precio que se vendió.
 //     Si mañana sube el shawarma, la venta de ayer no cambia.
 //  3. Nada del local vive fijo en el código: mesas, carta, adicionales,
 //     detalles, medios de pago, personal y datos del local se editan en
 //     Administración. La semilla solo los carga la primera vez.
+//  4. Una sola base para todas las sucursales: mesas, notas, cajas y personal
+//     llevan su sucursal, y cada consulta filtra por ella. La carta es una
+//     para todas, con lo propio de cada sucursal en ProductoSucursal.
 
 generator client {
   provider = "prisma-client-js"
@@ -24,6 +27,8 @@ enum Rol {
   MOZO
   COCINA
   ADMIN
+  CAJA
+  ENCARGADO
 }
 
 /// Cocina 1 (carta), cocina 2 (shawarmas), cocina 3 (emolientes y bebidas).
@@ -73,13 +78,11 @@ model Detalle {
   activo Boolean @default(true)
 }
 
-/// Los datos del local y las preferencias del sistema. Una sola fila (id 1).
+/// Los datos del negocio y las preferencias que comparten todas las sucursales. Una sola fila (id 1).
 model Ajustes {
   id            Int      @id @default(1)
   nombre        String   @default("Shawarma Wasi")
   subtitulo     String   @default("Peruvian Cuisine")
-  direccion     String   @default("")
-  telefono      String   @default("")
   ruc           String   @default("")
   /// Lo que se imprime al pie de la nota.
   pieNota       String   @default("¡Gracias por su visita!")
@@ -91,14 +94,57 @@ model Ajustes {
   minutosAlerta Int      @default(15)
 }
 
+/// Un local del negocio. Lo que se imprime en sus notas (dirección, teléfono) es suyo.
+model Sucursal {
+  id                 Int                @id @default(autoincrement())
+  nombre             String             @unique
+  direccion          String             @default("")
+  telefono           String             @default("")
+  activa             Boolean            @default(true)
+  creadaEn           DateTime           @default(now()) @db.Timestamptz(3)
+  usuarios           Usuario[]
+  mesas              Mesa[]
+  pedidos            Pedido[]
+  cajas              Caja[]
+  /// Los productos que solo vende esta sucursal (un combo de inauguración).
+  productos          Producto[]
+  /// Su precio, si se ofrece y si se agotó: lo propio de cada producto aquí.
+  productosAjustados ProductoSucursal[]
+  /// Temporal: la cocina de otra sucursal le prepara parte de sus pedidos
+  /// (Plaza San Cristóbal manda la carta y los shawarmas a la de Plaza More).
+  /// Lo de las demás cocinas, como los emolientes, se prepara en la propia. Se
+  /// deshace en Administración → Sucursales, sin tocar el código.
+  cocinaEnId         Int?
+  cocinaEn           Sucursal?          @relation("CocinaCompartida", fields: [cocinaEnId], references: [id], onDelete: SetNull)
+  /// Las cocinas (estaciones) que van a la otra sucursal.
+  cocinasCompartidas Estacion[]         @default([])
+  /// Las sucursales a las que esta les cocina.
+  cocinaPara         Sucursal[]         @relation("CocinaCompartida")
+}
+
+/// Mozo, cocina y caja entran con PIN en la tablet de su sucursal; la encargada
+/// y el administrador, con usuario y contraseña. El administrador no tiene
+/// sucursal: ve todas.
 model Usuario {
-  id       Int      @id @default(autoincrement())
-  nombre   String
-  rol      Rol
-  pinHash  String
-  activo   Boolean  @default(true)
-  creadoEn DateTime @default(now()) @db.Timestamptz(3)
-  pedidos  Pedido[]
+  id              Int              @id @default(autoincrement())
+  nombre          String
+  rol             Rol
+  sucursalId      Int?
+  sucursal        Sucursal?        @relation(fields: [sucursalId], references: [id])
+  pinHash         String?
+  /// El nombre con que entra la encargada o el administrador, en minúsculas.
+  usuario         String?          @unique
+  claveHash       String?
+  activo          Boolean          @default(true)
+  creadoEn        DateTime         @default(now()) @db.Timestamptz(3)
+  pedidos         Pedido[]         @relation("Mozo")
+  cobros          Pedido[]         @relation("Cobrador")
+  cajasAbiertas   Caja[]           @relation("CajaAbierta")
+  cajasCerradas   Caja[]           @relation("CajaCerrada")
+  movimientosCaja MovimientoCaja[]
+  eventosCaja     EventoCaja[]
+
+  @@index([sucursalId])
 }
 
 /// La columna «Producto» del Excel: Shawarma, Artesanal-Carne, Caldo…
@@ -116,23 +162,43 @@ model Familia {
 
 /// La columna «Detalle» del Excel: la variante dentro de la familia.
 model Producto {
-  id          Int          @id @default(autoincrement())
+  id          Int                @id @default(autoincrement())
   familiaId   Int
-  familia     Familia      @relation(fields: [familiaId], references: [id])
+  familia     Familia            @relation(fields: [familiaId], references: [id])
   codigo      String?
   variante    String
   nombre      String
   descripcion String?
+  /// El precio de la carta; una sucursal puede tener el suyo (ProductoSucursal).
   precio      Int
   imagenUrl   String?
   orden       Int
-  activo      Boolean      @default(true)
-  /// false = agotado por hoy: sigue en la carta pero no se puede pedir.
-  disponible  Boolean      @default(true)
+  activo      Boolean            @default(true)
+  /// null = se vende en todas las sucursales; con valor, solo en esa.
+  sucursalId  Int?
+  sucursal    Sucursal?          @relation(fields: [sucursalId], references: [id])
+  enSucursal  ProductoSucursal[]
   receta      RecetaItem[]
   items       ItemPedido[]
 
   @@unique([familiaId, variante])
+}
+
+/// Lo propio de un producto en una sucursal. Sin fila, rige la carta.
+model ProductoSucursal {
+  productoId Int
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  sucursalId Int
+  sucursal   Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  /// null = el precio de la carta.
+  precio     Int?
+  /// true = esta sucursal no lo ofrece.
+  oculto     Boolean  @default(false)
+  /// true = agotado por hoy en esta sucursal: sigue en la carta pero no se puede pedir.
+  agotado    Boolean  @default(false)
+
+  @@id([productoId, sucursalId])
+  @@index([sucursalId])
 }
 
 model Adicional {
@@ -149,37 +215,50 @@ model Adicional {
 }
 
 model Mesa {
-  id      Int      @id @default(autoincrement())
-  numero  Int
-  tipo    TipoMesa
-  activa  Boolean  @default(true)
-  pedidos Pedido[]
+  id         Int      @id @default(autoincrement())
+  sucursalId Int
+  sucursal   Sucursal @relation(fields: [sucursalId], references: [id])
+  numero     Int
+  tipo       TipoMesa
+  activa     Boolean  @default(true)
+  pedidos    Pedido[]
 
-  @@unique([tipo, numero])
+  /// Cada sucursal tiene su M1 y su L1.
+  @@unique([sucursalId, tipo, numero])
 }
 
 model Pedido {
-  id            Int          @id @default(autoincrement())
-  mesaId        Int
-  mesa          Mesa         @relation(fields: [mesaId], references: [id])
-  mozoId        Int?
-  mozo          Usuario?     @relation(fields: [mozoId], references: [id])
-  cliente       String?
-  estado        EstadoPedido @default(ABIERTO)
-  total         Int          @default(0)
-  creadoEn      DateTime     @default(now()) @db.Timestamptz(3)
-  actualizadoEn DateTime     @updatedAt @db.Timestamptz(3)
-  cobradoEn     DateTime?    @db.Timestamptz(3)
-  anuladoEn     DateTime?    @db.Timestamptz(3)
-  items         ItemPedido[]
-  pagos         Pago[]
+  id             Int          @id @default(autoincrement())
+  /// La de su mesa, copiada: cada consulta filtra por sucursal sin pasar por la mesa.
+  sucursalId     Int
+  sucursal       Sucursal     @relation(fields: [sucursalId], references: [id])
+  mesaId         Int
+  mesa           Mesa         @relation(fields: [mesaId], references: [id])
+  mozoId         Int?
+  mozo           Usuario?     @relation("Mozo", fields: [mozoId], references: [id])
+  cliente        String?
+  estado         EstadoPedido @default(ABIERTO)
+  total          Int          @default(0)
+  creadoEn       DateTime     @default(now()) @db.Timestamptz(3)
+  actualizadoEn  DateTime     @updatedAt @db.Timestamptz(3)
+  /// El mozo avisó a caja que la mesa pide la cuenta.
+  cuentaPedidaEn DateTime?    @db.Timestamptz(3)
+  cobradoEn      DateTime?    @db.Timestamptz(3)
+  cobradoPorId   Int?
+  cobradoPor     Usuario?     @relation("Cobrador", fields: [cobradoPorId], references: [id])
+  anuladoEn      DateTime?    @db.Timestamptz(3)
+  items          ItemPedido[]
+  pagos          Pago[]
 
   @@index([mesaId, estado])
   @@index([estado, cobradoEn])
-  /// Los reportes filtran por el momento del cobro (rangos de fecha de Lima).
+  /// Los reportes filtran por el momento del cobro (rangos de fecha de Lima)…
   @@index([cobradoEn])
-  /// El número de la nota en el día se cuenta por la hora de creación.
+  /// …y por sucursal, cuando no son de todas.
+  @@index([sucursalId, cobradoEn])
+  /// El número de la nota en el día se cuenta por la hora de creación, en cada sucursal.
   @@index([creadoEn])
+  @@index([sucursalId, creadoEn])
   @@index([mozoId])
 }
 
@@ -219,9 +298,12 @@ model ItemPedido {
 }
 
 model Pago {
-  id       Int        @id @default(autoincrement())
+  id       Int      @id @default(autoincrement())
   pedidoId Int
   pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  /// El turno de caja que lo cobró: es lo que suma su arqueo.
+  cajaId   Int?
+  caja     Caja?    @relation(fields: [cajaId], references: [id])
   /// La clave del medio de pago (EFECTIVO, YAPE…).
   metodo   String
   /// Lo que se aplica a la cuenta. Con efectivo, `recibido - monto` es el vuelto.
@@ -231,6 +313,89 @@ model Pago {
 
   @@index([pedidoId])
   @@index([metodo])
+  @@index([cajaId])
+}
+
+enum EstadoCaja {
+  ABIERTA
+  CERRADA
+}
+
+/// Un turno de caja: se abre con un fondo de sencillo, cobra las notas de su
+/// sucursal y se cierra contando el efectivo (el arqueo). Una sucursal tiene a
+/// lo más una caja abierta.
+model Caja {
+  id             Int              @id @default(autoincrement())
+  sucursalId     Int
+  sucursal       Sucursal         @relation(fields: [sucursalId], references: [id])
+  estado         EstadoCaja       @default(ABIERTA)
+  abiertaPorId   Int
+  abiertaPor     Usuario          @relation("CajaAbierta", fields: [abiertaPorId], references: [id])
+  abiertaEn      DateTime         @default(now()) @db.Timestamptz(3)
+  /// El fondo con que empieza: el sencillo para dar vuelto.
+  montoInicial   Int
+  cerradaPorId   Int?
+  cerradaPor     Usuario?         @relation("CajaCerrada", fields: [cerradaPorId], references: [id])
+  cerradaEn      DateTime?        @db.Timestamptz(3)
+  /// Al cerrar: lo que debía haber en efectivo (fondo + cobros en efectivo + ingresos − egresos)…
+  esperado       Int?
+  /// …lo que se contó, y cuántos billetes y monedas de cada uno: { "20000": 1, "50": 4 }.
+  contado        Int?
+  conteo         Json?
+  /// Lo que queda en la caja para el siguiente turno; el resto se retira.
+  fondoSiguiente Int?
+  observacion    String?
+  pagos          Pago[]
+  movimientos    MovimientoCaja[]
+  eventos        EventoCaja[]
+
+  @@index([sucursalId, estado])
+  @@index([sucursalId, abiertaEn])
+  @@index([abiertaEn])
+}
+
+enum TipoMovimiento {
+  INGRESO
+  EGRESO
+}
+
+/// Dinero que entra o sale de la caja sin ser una venta: la compra de gas, el
+/// pago al proveedor, más sencillo para dar vuelto…
+model MovimientoCaja {
+  id        Int            @id @default(autoincrement())
+  cajaId    Int
+  caja      Caja           @relation(fields: [cajaId], references: [id], onDelete: Cascade)
+  tipo      TipoMovimiento
+  monto     Int
+  concepto  String
+  usuarioId Int
+  usuario   Usuario        @relation(fields: [usuarioId], references: [id])
+  creadoEn  DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@index([cajaId])
+}
+
+enum TipoEventoCaja {
+  APERTURA
+  CIERRE
+  REAPERTURA
+}
+
+/// La bitácora de cada caja: quién la abrió, la cerró o la volvió a abrir, y con cuánto.
+model EventoCaja {
+  id         Int            @id @default(autoincrement())
+  cajaId     Int
+  caja       Caja           @relation(fields: [cajaId], references: [id], onDelete: Cascade)
+  tipo       TipoEventoCaja
+  usuarioId  Int
+  usuario    Usuario        @relation(fields: [usuarioId], references: [id])
+  creadoEn   DateTime       @default(now()) @db.Timestamptz(3)
+  /// Apertura: el fondo. Cierre: lo contado.
+  monto      Int?
+  /// Cierre: lo contado menos lo esperado.
+  diferencia Int?
+
+  @@index([cajaId])
 }
 
 /// La hoja «Costos»: lo que cuesta comprar cada insumo.
@@ -259,4 +424,43 @@ model RecetaItem {
 
   @@unique([productoId, insumoId])
   @@index([insumoId])
+}
+
+/// Reintentos sin duplicar. Si el wifi del local se corta justo después de
+/// «Guardar» o «Cobrar», la tablet no sabe si llegó y lo vuelve a mandar con la
+/// misma clave: el servidor no lo repite y devuelve lo mismo que la primera vez.
+/// Se guarda dos días.
+model Idempotencia {
+  /// El usuario y la clave que mandó la tablet.
+  clave     String   @id
+  ruta      String
+  huella    String?
+  /// Mientras se procesa, vacío; después, lo que se respondió.
+  estado    Int?
+  respuesta Json?
+  creadoEn  DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([creadoEn])
+}
+
+/// Avisos confirmados junto al pedido o cobro. Cualquier instancia puede leerlos.
+model Aviso {
+  id         BigInt   @id @default(autoincrement())
+  sucursalId Int?
+  soloSucursal Boolean @default(false)
+  cambio     Json
+  creadoEn   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([creadoEn])
+  @@index([sucursalId, id])
+}
+
+/// Freno de acceso compartido por todas las instancias, sin guardar la IP.
+model IntentoAcceso {
+  clave    String   @id
+  fallos   Int      @default(0)
+  hasta    DateTime?
+  ultimo   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([ultimo])
 }

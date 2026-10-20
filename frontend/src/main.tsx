@@ -1,7 +1,10 @@
 import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import type { Usuario } from '@wasi/shared'
 import './estilos.css'
+import { api } from './lib/api'
+import { guardarSesion, sesionActual } from './lib/sesion'
 import { Inicio } from './vistas/inicio'
 import { Area } from './vistas/acceso'
 import { LibroMozo } from './vistas/mozo/libro'
@@ -21,8 +24,20 @@ window.addEventListener('vite:preloadError', (evento) => {
   location.reload()
 })
 
-// Cocina y administración se cargan aparte: el celular del mozo baja solo lo suyo.
+// La sesión guardada se pone al día con el servidor: si a alguien le cambiaron el área o la
+// sucursal mientras la tablet seguía abierta, la pantalla lo sabe al recargar.
+if (sesionActual()) {
+  void api<Usuario>('/auth/yo')
+    .then((usuario) => {
+      const s = sesionActual()
+      if (s) guardarSesion({ ...s, usuario })
+    })
+    .catch(() => {})
+}
+
+// Cocina, caja y administración se cargan aparte: el celular del mozo baja solo lo suyo.
 const Cocina = lazy(() => import('./vistas/cocina/cocina').then((m) => ({ default: m.Cocina })))
+const Caja = lazy(() => import('./vistas/caja/caja').then((m) => ({ default: m.Caja })))
 const Admin = lazy(() => import('./vistas/admin/admin').then((m) => ({ default: m.Admin })))
 
 const cargando = (
@@ -39,7 +54,7 @@ createRoot(document.getElementById('raiz')!).render(
         <Route
           path="/mozo"
           element={
-            <Area rol="MOZO">
+            <Area area="MOZO">
               <LibroMozo />
             </Area>
           }
@@ -50,7 +65,7 @@ createRoot(document.getElementById('raiz')!).render(
         <Route
           path="/cocina"
           element={
-            <Area rol="COCINA">
+            <Area area="COCINA">
               <Suspense fallback={cargando}>
                 <Cocina />
               </Suspense>
@@ -58,9 +73,19 @@ createRoot(document.getElementById('raiz')!).render(
           }
         />
         <Route
+          path="/caja"
+          element={
+            <Area area="CAJA">
+              <Suspense fallback={cargando}>
+                <Caja />
+              </Suspense>
+            </Area>
+          }
+        />
+        <Route
           path="/admin/*"
           element={
-            <Area rol="ADMIN">
+            <Area area="PANEL">
               <Suspense fallback={cargando}>
                 <Admin />
               </Suspense>

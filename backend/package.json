@@ -11,8 +11,10 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:demo": "tsx prisma/demo.ts",
+    "db:respaldo": "node scripts/respaldo.mjs",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
+    "clave": "tsx scripts/clave.ts",
     "postinstall": "prisma generate",
     "build": "node scripts/compilar.mjs",
     "test": "node scripts/probar.mjs"
@@ -20,6 +22,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "@vercel/functions": "^3.10.1",
     "@wasi/shared": "*",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
@@ -40,6 +43,7 @@
     "@types/node": "^24.10.1",
     "@types/pg": "^8.15.6",
     "esbuild": "^0.28.2",
+    "socket.io-client": "^4.8.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }

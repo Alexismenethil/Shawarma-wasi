@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, useAnimationControls } from 'motion/react'
 import { mdiBackspaceOutline } from '@mdi/js'
-import type { Rol } from '@wasi/shared'
 import { api } from '../lib/api'
 import { guardarSesion, type Sesion } from '../lib/sesion'
 import { despertarAudio } from '../lib/sonido'
@@ -13,9 +12,9 @@ const LARGO = 4
 /**
  * El teclado del PIN: cuatro casillas y un teclado numérico de teclas
  * rectangulares, grande para usarlo de pie con el pulgar. También acepta el
- * teclado de la computadora.
+ * teclado de la computadora. El PIN vale en la sucursal elegida.
  */
-export function TecladoPin({ rol, alEntrar }: { rol: Rol; alEntrar?: (s: Sesion) => void }) {
+export function TecladoPin({ area, sucursalId, alEntrar }: { area: 'MOZO' | 'COCINA' | 'CAJA'; sucursalId: number | null; alEntrar?: (s: Sesion) => void }) {
   const [pin, setPinEstado] = useState('')
   const pinRef = useRef('')
   const setPin = useCallback((valor: string | ((p: string) => string)) => {
@@ -29,13 +28,13 @@ export function TecladoPin({ rol, alEntrar }: { rol: Rol; alEntrar?: (s: Sesion)
   useEffect(() => {
     setPin('')
     setError(null)
-  }, [rol, setPin])
+  }, [area, sucursalId, setPin])
 
   const enviar = useCallback(
     async (valor: string) => {
       setEnviando(true)
       try {
-        const sesion = await api<Sesion>('/auth/ingresar', { cuerpo: { rol, pin: valor } })
+        const sesion = await api<Sesion>('/auth/ingresar', { cuerpo: { area, sucursalId, pin: valor } })
         guardarSesion(sesion)
         alEntrar?.(sesion)
       } catch (e) {
@@ -46,19 +45,19 @@ export function TecladoPin({ rol, alEntrar }: { rol: Rol; alEntrar?: (s: Sesion)
         setEnviando(false)
       }
     },
-    [rol, alEntrar, temblor, setPin],
+    [area, sucursalId, alEntrar, temblor, setPin],
   )
 
   const pulsar = useCallback(
     (d: string) => {
       despertarAudio()
-      if (enviando) return
+      if (enviando || !sucursalId) return
       setError(null)
       const nuevo = (pinRef.current + d).slice(0, LARGO)
       setPin(nuevo)
       if (nuevo.length === LARGO) void enviar(nuevo)
     },
-    [enviando, enviar, setPin],
+    [enviando, sucursalId, enviar, setPin],
   )
 
   useEffect(() => {
@@ -96,9 +95,9 @@ export function TecladoPin({ rol, alEntrar }: { rol: Rol; alEntrar?: (s: Sesion)
       </motion.div>
       <p role="status" className={`mb-4 flex h-5 items-center gap-2 text-[13px] ${error ? 'text-rojo' : 'text-tinta-3'}`}>
         {enviando && <Rueda className="size-3.5" />}
-        {error ?? (enviando ? 'Verificando…' : 'Ingresa tu PIN de 4 dígitos')}
+        {error ?? (enviando ? 'Verificando…' : sucursalId ? 'Ingresa tu PIN de 4 dígitos' : 'Primero elige la sucursal')}
       </p>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className={`grid grid-cols-3 gap-1.5 ${sucursalId ? '' : 'pointer-events-none opacity-45'}`} aria-disabled={!sucursalId}>
         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
           <button key={d} className={tecla} onClick={() => pulsar(d)}>
             {d}

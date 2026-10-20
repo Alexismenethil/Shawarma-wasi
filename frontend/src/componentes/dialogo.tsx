@@ -43,7 +43,7 @@ export function Dialogo({
   return createPortal(
     <AnimatePresence>
       {abierto && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6">
+        <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6 print:hidden">
           <motion.div className="absolute inset-0 bg-black/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={alCerrar} />
           <motion.div
             ref={caja}
@@ -79,30 +79,48 @@ export function Dialogo({
 
 /* ── Confirmación rápida: const ok = await confirmar({ … }) ── */
 
+interface Opcion<T> {
+  etiqueta: string
+  valor: T
+  variante?: Variante
+}
+
 interface Pedido {
   titulo: string
   mensaje: ReactNode
-  aceptar?: string
+  opciones: Opcion<unknown>[]
   cancelar?: string
-  variante?: Variante
   peligro?: boolean
-  resolver: (ok: boolean) => void
+  icono?: string
+  resolver: (valor: unknown) => void
 }
 
 let actual: Pedido | null = null
 const oyentes = new Set<() => void>()
 const publicar = () => oyentes.forEach((o) => o())
 
-export function confirmar(p: Omit<Pedido, 'resolver'>): Promise<boolean> {
+/** Una pregunta con varias salidas («Cerrar caja», «Salir sin cerrar»…); null si se cancela. */
+export function elegir<T>(p: { titulo: string; mensaje: ReactNode; opciones: Opcion<T>[]; cancelar?: string; peligro?: boolean; icono?: string }): Promise<T | null> {
   return new Promise((resolver) => {
-    actual?.resolver(false)
-    actual = { ...p, resolver }
+    actual?.resolver(null)
+    actual = { ...p, resolver: resolver as (v: unknown) => void }
     publicar()
   })
 }
 
-function responder(ok: boolean) {
-  actual?.resolver(ok)
+export async function confirmar(p: { titulo: string; mensaje: ReactNode; aceptar?: string; cancelar?: string; variante?: Variante; peligro?: boolean }): Promise<boolean> {
+  const valor = await elegir({
+    titulo: p.titulo,
+    mensaje: p.mensaje,
+    cancelar: p.cancelar,
+    peligro: p.peligro,
+    opciones: [{ etiqueta: p.aceptar ?? 'Aceptar', valor: true, variante: p.variante ?? (p.peligro ? 'peligro' : 'guardar') }],
+  })
+  return valor === true
+}
+
+function responder(valor: unknown) {
+  actual?.resolver(valor)
   actual = null
   publicar()
 }
@@ -119,20 +137,22 @@ export function Confirmaciones() {
     <Dialogo
       abierto={!!p}
       titulo={p?.titulo ?? ''}
-      alCerrar={() => responder(false)}
+      alCerrar={() => responder(null)}
       botones={
         <>
-          <Boton variante="claro" onClick={() => responder(false)} className="min-w-28">
+          <Boton variante="claro" onClick={() => responder(null)} className="min-w-28">
             {p?.cancelar ?? 'Cancelar'}
           </Boton>
-          <Boton variante={p?.variante ?? (p?.peligro ? 'peligro' : 'guardar')} onClick={() => responder(true)} className="min-w-28" data-foco>
-            {p?.aceptar ?? 'Aceptar'}
-          </Boton>
+          {p?.opciones.map((o, i) => (
+            <Boton key={o.etiqueta} variante={o.variante ?? 'guardar'} onClick={() => responder(o.valor)} className="min-w-28" data-foco={i === p.opciones.length - 1 || undefined}>
+              {o.etiqueta}
+            </Boton>
+          ))}
         </>
       }
     >
       <div className="flex gap-3">
-        <Icono d={p?.peligro ? mdiAlert : mdiHelpCircle} className={`size-9 ${p?.peligro ? 'text-rojo' : 'text-azul'}`} />
+        <Icono d={p?.icono ?? (p?.peligro ? mdiAlert : mdiHelpCircle)} className={`size-9 ${p?.peligro ? 'text-rojo' : 'text-azul'}`} />
         <div className="min-w-0 flex-1 pt-1 text-[14.5px] text-tinta">{p?.mensaje}</div>
       </div>
     </Dialogo>

@@ -410,6 +410,9 @@ input[type='number'] {
 }
 
 @media print {
+  @page {
+    margin: 2mm;
+  }
   body {
     background: #fff;
   }

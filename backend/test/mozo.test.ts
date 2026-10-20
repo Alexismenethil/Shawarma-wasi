@@ -1,12 +1,12 @@
 import { before, describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import type { Carta, MesaResumen, Pedido } from '@wasi/shared'
-import { type Cliente, conApi, enCarta, ingresar, linea, mesa } from './ayuda.js'
+import { type Cliente, cajaAbierta, conApi, enCarta, ingresar, linea, mesa } from './ayuda.js'
 
 const api = conApi()
 
 describe('nota de pedido', () => {
-  let mozo: Cliente, cocina: Cliente, admin: Cliente
+  let mozo: Cliente, cocina: Cliente, caja: Cliente, admin: Cliente
   let carta: Carta
   let c: ReturnType<typeof enCarta>
 
@@ -23,9 +23,11 @@ describe('nota de pedido', () => {
   before(async () => {
     mozo = await ingresar(api.url, 'MOZO')
     cocina = await ingresar(api.url, 'COCINA')
+    caja = await ingresar(api.url, 'CAJA')
     admin = await ingresar(api.url, 'ADMIN')
     carta = (await mozo.get<Carta>('/carta')).datos
     c = enCarta(carta)
+    await cajaAbierta(caja)
   })
 
   it('la carta trae familias, adicionales y los detalles de la hoja Detalle', () => {
@@ -75,11 +77,11 @@ describe('nota de pedido', () => {
     assert.equal(detalle.estado, 400)
     assert.match(detalle.datos.error, /ya no existe/)
 
-    assert.equal((await admin.patch(`/admin/productos/${sh.id}`, { disponible: false })).estado, 200)
+    assert.equal((await admin.put(`/admin/productos/${sh.id}/sucursal`, { agotado: true })).estado, 200)
     const agotado = await mozo.post(`/mesas/${m2}/enviar`, { lineas: [linea(sh.id)] })
     assert.equal(agotado.estado, 400)
     assert.match(agotado.datos.error, /agotado/)
-    await admin.patch(`/admin/productos/${sh.id}`, { disponible: true })
+    await admin.put(`/admin/productos/${sh.id}/sucursal`, { agotado: false })
 
     assert.equal((await mozo.post(`/mesas/${m2}/enviar`, { lineas: [linea(sh.id, { adicionales: [99999] })] })).estado, 400)
     assert.equal((await mozo.post(`/mesas/${m2}/enviar`, { lineas: [] })).estado, 400)
@@ -116,16 +118,25 @@ describe('nota de pedido', () => {
     assert.equal((await estadoDe('M1')).estado, 'POR_COBRAR')
   })
 
-  it('cobra como la nota del Excel: «Debe», electrónico exacto y vuelto en efectivo', async () => {
+  it('el mozo pide la cuenta, pero solo caja cobra', async () => {
     const p = (await mozo.get<Pedido>(`/mesas/${await mesa(mozo, 'M1')}/pedido`)).datos
-    const pasado = await mozo.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'YAPE', monto: p.total + 100 }] })
+    assert.equal((await mozo.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'EFECTIVO', monto: p.total }] })).estado, 403)
+    const pedida = await mozo.post<Pedido>(`/pedidos/${p.id}/cuenta`)
+    assert.equal(pedida.estado, 200, pedida.texto)
+    assert.ok(pedida.datos.cuentaPedidaEn)
+    assert.ok((await estadoDe('M1')).pedido?.cuentaPedidaEn)
+  })
+
+  it('caja cobra como la nota del Excel: «Debe», electrónico exacto y vuelto en efectivo', async () => {
+    const p = (await mozo.get<Pedido>(`/mesas/${await mesa(mozo, 'M1')}/pedido`)).datos
+    const pasado = await caja.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'YAPE', monto: p.total + 100 }] })
     assert.equal(pasado.estado, 400)
     assert.match(pasado.datos.error, /supera/)
-    const corto = await mozo.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'EFECTIVO', monto: p.total - 100 }] })
+    const corto = await caja.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'EFECTIVO', monto: p.total - 100 }] })
     assert.equal(corto.estado, 400)
     assert.match(corto.datos.error, /Debe S\/ 1\.00/)
 
-    const r = await mozo.post<Pedido>(`/pedidos/${p.id}/cobrar`, {
+    const r = await caja.post<Pedido>(`/pedidos/${p.id}/cobrar`, {
       pagos: [
         { metodo: 'YAPE', monto: 1000 },
         { metodo: 'EFECTIVO', monto: p.total - 1000 + 500 },
@@ -138,14 +149,15 @@ describe('nota de pedido', () => {
     assert.equal(efectivo.monto, p.total - 1000)
     assert.equal(efectivo.recibido! - efectivo.monto, 500) // el vuelto
     assert.equal(r.datos.estado, 'COBRADO')
+    assert.equal(r.datos.cobradoPor, 'Caja')
     assert.equal((await estadoDe('M1')).estado, 'LIBRE')
-    assert.equal((await mozo.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'EFECTIVO', monto: 100 }] })).estado, 400)
+    assert.equal((await caja.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'EFECTIVO', monto: 100 }] })).estado, 400)
   })
 
   it('para llevar: se paga antes y la nota sigue abierta hasta entregar todo', async () => {
     const l1 = await mesa(mozo, 'L1')
     const p = (await mozo.post<Pedido>(`/mesas/${l1}/enviar`, { cliente: 'Jhon', lineas: [linea(c.producto('Shawarma', 'Clásica').id, { paraLlevar: true })] })).datos
-    const pagado = await mozo.post<Pedido>(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'YAPE', monto: p.total }] })
+    const pagado = await caja.post<Pedido>(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'YAPE', monto: p.total }] })
     assert.equal(pagado.estado, 200, pagado.texto)
     assert.equal(pagado.datos.estado, 'ABIERTO')
     const enLista = await estadoDe('L1')
@@ -159,7 +171,7 @@ describe('nota de pedido', () => {
     assert.equal((await estadoDe('L1')).estado, 'LIBRE')
   })
 
-  it('el mozo anula lo pendiente; lo que cocina ya terminó solo lo anula el administrador', async () => {
+  it('el mozo anula lo pendiente; lo que cocina ya terminó solo lo anula la encargada o el administrador', async () => {
     const m2 = await mesa(mozo, 'M2')
     const p = (await mozo.post<Pedido>(`/mesas/${m2}/enviar`, { lineas: [linea(c.producto('Caldo', 'Gallina').id), linea(c.producto('Chifa', 'Arroz Chaufa').id)] })).datos
     const [a, b] = p.items
@@ -193,10 +205,10 @@ describe('nota de pedido', () => {
     const plin = medios.find((m) => m.clave === 'PLIN')!
     await admin.patch(`/admin/medios/${plin.id}`, { activo: false })
     const p = (await mozo.post<Pedido>(`/mesas/${await mesa(mozo, 'M6')}/enviar`, { lineas: [linea(c.producto('Shawarma', 'Clásica').id)] })).datos
-    const r = await mozo.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'PLIN', monto: p.total }] })
+    const r = await caja.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'PLIN', monto: p.total }] })
     assert.equal(r.estado, 400)
     assert.match(r.datos.error, /ya no está disponible/)
     await admin.patch(`/admin/medios/${plin.id}`, { activo: true })
-    assert.equal((await mozo.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'PLIN', monto: p.total }] })).estado, 200)
+    assert.equal((await caja.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'PLIN', monto: p.total }] })).estado, 200)
   })
 })

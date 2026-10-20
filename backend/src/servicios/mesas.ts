@@ -5,14 +5,16 @@ import { ErrorNegocio } from '../errores.js'
 import { avisar } from '../tiempo-real.js'
 
 /**
- * Las mesas del salón y los turnos para llevar: las pestañas M1…M25 y L1…L10
- * del Excel. El local las agrega, renumera o retira desde Administración.
+ * Las mesas del salón y los turnos para llevar de cada sucursal: las pestañas
+ * M1…M25 y L1…L10 del Excel. El local las agrega, renumera o retira desde
+ * Administración; cada sucursal tiene las suyas.
  */
 
-const avisarMesas = () => avisar({ mesas: true })
+const avisarMesas = (sucursalId: number) => avisar({ mesas: true }, sucursalId)
 
-export async function listarMesasAdmin() {
+export async function listarMesasAdmin(sucursalId: number) {
   const mesas = await prisma.mesa.findMany({
+    where: { sucursalId },
     orderBy: [{ tipo: 'asc' }, { numero: 'asc' }],
     include: {
       _count: { select: { pedidos: true } },
@@ -29,51 +31,57 @@ export async function listarMesasAdmin() {
   }))
 }
 
-export async function crearMesa(tipo: TipoMesa, numero?: number) {
-  const n = numero ?? ((await prisma.mesa.aggregate({ where: { tipo }, _max: { numero: true } }))._max.numero ?? 0) + 1
-  const existe = await prisma.mesa.findUnique({ where: { tipo_numero: { tipo, numero: n } } })
+async function mesaDe(sucursalId: number, id: number) {
+  const mesa = await prisma.mesa.findFirst({ where: { id, sucursalId }, include: { _count: { select: { pedidos: true } } } })
+  if (!mesa) throw new ErrorNegocio('Esa mesa no existe.', 404)
+  return mesa
+}
+
+const llave = (sucursalId: number, tipo: TipoMesa, numero: number) => ({ sucursalId_tipo_numero: { sucursalId, tipo, numero } })
+
+export async function crearMesa(sucursalId: number, tipo: TipoMesa, numero?: number) {
+  const n = numero ?? ((await prisma.mesa.aggregate({ where: { sucursalId, tipo }, _max: { numero: true } }))._max.numero ?? 0) + 1
+  const existe = await prisma.mesa.findUnique({ where: llave(sucursalId, tipo, n) })
   if (existe?.activa) throw new ErrorNegocio(`${nombreMesa({ tipo, numero: n })} ya existe.`)
   // Si estaba retirada, vuelve con su historial.
   const mesa = existe
     ? await prisma.mesa.update({ where: { id: existe.id }, data: { activa: true } })
-    : await prisma.mesa.create({ data: { tipo, numero: n } })
-  avisarMesas()
+    : await prisma.mesa.create({ data: { sucursalId, tipo, numero: n } })
+  avisarMesas(sucursalId)
   return mesa
 }
 
-export async function actualizarMesa(id: number, datos: Partial<{ numero: number; activa: boolean }>) {
-  const mesa = await prisma.mesa.findUnique({ where: { id } })
-  if (!mesa) throw new ErrorNegocio('Esa mesa no existe.', 404)
+export async function actualizarMesa(sucursalId: number, id: number, datos: Partial<{ numero: number; activa: boolean }>) {
+  const mesa = await mesaDe(sucursalId, id)
   if (datos.numero !== undefined && datos.numero !== mesa.numero) {
-    const otra = await prisma.mesa.findUnique({ where: { tipo_numero: { tipo: mesa.tipo, numero: datos.numero } } })
+    const otra = await prisma.mesa.findUnique({ where: llave(sucursalId, mesa.tipo, datos.numero) })
     if (otra) throw new ErrorNegocio(`${nombreMesa(otra)} ya existe${otra.activa ? '' : ' (retirada)'}.`)
   }
   if (datos.activa === false && (await prisma.pedido.count({ where: { mesaId: id, estado: 'ABIERTO' } }))) {
     throw new ErrorNegocio(`${nombreMesa(mesa)} tiene una nota abierta: ciérrala antes de retirarla.`)
   }
   const actualizada = await prisma.mesa.update({ where: { id }, data: datos })
-  avisarMesas()
+  avisarMesas(sucursalId)
   return actualizada
 }
 
 /** Las siguientes `cantidad` mesas (después del número más alto), todas en una transacción. */
-export async function crearMesas(tipo: TipoMesa, cantidad: number) {
+export async function crearMesas(sucursalId: number, tipo: TipoMesa, cantidad: number) {
   const creadas = await prisma.$transaction(async (tx) => {
-    const tope = (await tx.mesa.aggregate({ where: { tipo }, _max: { numero: true } }))._max.numero ?? 0
-    await tx.mesa.createMany({ data: Array.from({ length: cantidad }, (_, i) => ({ tipo, numero: tope + i + 1 })) })
-    return tx.mesa.findMany({ where: { tipo, numero: { gt: tope } }, orderBy: { numero: 'asc' } })
+    const tope = (await tx.mesa.aggregate({ where: { sucursalId, tipo }, _max: { numero: true } }))._max.numero ?? 0
+    await tx.mesa.createMany({ data: Array.from({ length: cantidad }, (_, i) => ({ sucursalId, tipo, numero: tope + i + 1 })) })
+    return tx.mesa.findMany({ where: { sucursalId, tipo, numero: { gt: tope } }, orderBy: { numero: 'asc' } })
   })
-  avisarMesas()
+  avisarMesas(sucursalId)
   return creadas
 }
 
 /** Una mesa con historial no se borra (sus ventas la nombran): se retira. */
-export async function borrarMesa(id: number) {
-  const mesa = await prisma.mesa.findUnique({ where: { id }, include: { _count: { select: { pedidos: true } } } })
-  if (!mesa) throw new ErrorNegocio('Esa mesa no existe.', 404)
+export async function borrarMesa(sucursalId: number, id: number) {
+  const mesa = await mesaDe(sucursalId, id)
   if (mesa._count.pedidos > 0) {
     throw new ErrorNegocio(`${nombreMesa(mesa)} ya tiene ventas: retírala en vez de borrarla.`)
   }
   await prisma.mesa.delete({ where: { id } })
-  avisarMesas()
+  avisarMesas(sucursalId)
 }

@@ -10,6 +10,16 @@ export const solesCorto = (centimos: number) =>
 export const hora = (iso: string | Date) =>
   new Date(iso).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Lima' })
 
+/** «18/10 08:12», para la bitácora de la caja. */
+export const fechaHora = (iso: string | Date) =>
+  new Date(iso).toLocaleString('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', '')
+
+/** El día de Lima de un instante: «2026-10-18». */
+export const diaLima = (iso: string | Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date(iso))
+
+/** La diferencia de un arqueo dicha como en la caja: «Cuadra», «Sobra S/ 1.00», «Falta S/ 2.00». */
+export const textoDiferencia = (d: number) => (d === 0 ? 'Cuadra' : d > 0 ? `Sobra S/ ${soles(d)}` : `Falta S/ ${soles(-d)}`)
+
 export const fechaLarga = (iso: string) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
 

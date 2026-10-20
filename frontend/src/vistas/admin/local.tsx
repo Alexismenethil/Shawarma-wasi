@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { mdiClose, mdiContentSave, mdiPlus } from '@mdi/js'
 import type { Ajustes, Estacion } from '@wasi/shared'
 import { ESTACIONES, NUMERO_ESTACION } from '@wasi/shared'
@@ -10,12 +11,14 @@ import { Icono } from '../../componentes/icono'
 import { Logo } from '../../componentes/marca'
 import { Pagina, Panel } from './piezas'
 
-type Formulario = Omit<Ajustes, 'medios'>
+type Formulario = Omit<Ajustes, 'medios' | 'sucursales'>
 
 /**
- * Los datos del local: el nombre y el subtítulo que encabezan cada hoja, lo
- * que sale impreso en la nota, el nombre de cada cocina, las observaciones
- * rápidas de la columna «Obs:» y cuándo un pedido se considera demorado.
+ * Los datos generales, los que comparten todas las sucursales: el nombre y el
+ * subtítulo que encabezan cada hoja, el RUC y el pie de la nota impresa, el
+ * nombre de cada cocina, las observaciones rápidas de la columna «Obs:» y
+ * cuándo un pedido se considera demorado. La dirección y el teléfono son de
+ * cada sucursal (Administración → Sucursales).
  */
 export function DatosLocal() {
   const ajustes = useAjustes()
@@ -25,13 +28,13 @@ export function DatosLocal() {
   const [cargado, setCargado] = useState(false)
   if (ajustes.cargado && !cargado) {
     setCargado(true)
-    const { medios: _m, cargado: _c, ...resto } = ajustes
+    const { medios: _m, sucursales: _s, cargado: _c, ...resto } = ajustes
     setF(resto)
   }
   if (!f) return null
 
   const original = (() => {
-    const { medios: _m, cargado: _c, ...resto } = ajustes
+    const { medios: _m, sucursales: _s, cargado: _c, ...resto } = ajustes
     return JSON.stringify(resto)
   })()
   const cambiado = JSON.stringify(f) !== original
@@ -42,7 +45,7 @@ export function DatosLocal() {
     setGuardando(true)
     try {
       await api('/admin/ajustes', { metodo: 'PATCH', cuerpo: f })
-      avisar('Datos del local guardados', 'ok')
+      avisar('Datos generales guardados', 'ok')
     } catch (e) {
       avisar((e as Error).message, 'error')
     } finally {
@@ -57,7 +60,7 @@ export function DatosLocal() {
     setNueva('')
   }
 
-  const campo = (k: 'nombre' | 'subtitulo' | 'direccion' | 'telefono' | 'ruc' | 'pieNota', etiqueta: string, placeholder = '', max = 60) => (
+  const campo = (k: 'nombre' | 'subtitulo' | 'ruc' | 'pieNota', etiqueta: string, placeholder = '', max = 60) => (
     <label className="grid gap-1.5 text-[13px] text-tinta-2">
       {etiqueta}
       <input className="campo" value={f[k]} maxLength={max} placeholder={placeholder} onChange={(e) => poner(k, e.target.value)} />
@@ -66,8 +69,8 @@ export function DatosLocal() {
 
   return (
     <Pagina
-      titulo="Datos del local"
-      detalle="Lo que encabeza cada hoja y sale en la nota impresa."
+      titulo="Datos generales"
+      detalle="Lo que comparten todas las sucursales: el encabezado de cada hoja y la nota impresa."
       acciones={
         <Boton variante="guardar" icono={mdiContentSave} disabled={!cambiado} cargando={guardando} onClick={() => void guardar()} className="h-9">
           Guardar cambios
@@ -75,7 +78,7 @@ export function DatosLocal() {
       }
     >
       <div className="grid max-w-[1100px] gap-4 lg:grid-cols-2">
-        <Panel titulo="El local" estilo="excel" color="#93c47d">
+        <Panel titulo="El negocio" estilo="excel" color="#93c47d">
           <div className="grid gap-4">
             <div className="flex items-center gap-3 border border-reja bg-gris-50 px-3 py-3">
               <Logo className="size-12" />
@@ -88,12 +91,15 @@ export function DatosLocal() {
               {campo('nombre', 'Nombre del local', 'Shawarma Wasi', 40)}
               {campo('subtitulo', 'Subtítulo', 'Peruvian Cuisine')}
             </div>
-            {campo('direccion', 'Dirección', 'Jr. …, Huamanga', 120)}
-            <div className="grid gap-3 sm:grid-cols-2">
-              {campo('telefono', 'Teléfono', '', 30)}
-              {campo('ruc', 'RUC', '', 20)}
-            </div>
+            {campo('ruc', 'RUC', '', 20)}
             {campo('pieNota', 'Mensaje al pie de la nota impresa', '¡Gracias por su visita!', 140)}
+            <p className="text-[12.5px] text-tinta-3">
+              La dirección y el teléfono que salen en la nota son de cada sucursal: se editan en{' '}
+              <Link to="/admin/sucursales" className="text-azul underline">
+                Sucursales
+              </Link>
+              .
+            </p>
           </div>
         </Panel>
 

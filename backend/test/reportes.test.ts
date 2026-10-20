@@ -1,7 +1,7 @@
 import { before, describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import type { Carta, Pedido } from '@wasi/shared'
-import { type Cliente, conApi, enCarta, ingresar, linea, mesa } from './ayuda.js'
+import { type Cliente, cajaAbierta, conApi, enCarta, ingresar, linea, mesa } from './ayuda.js'
 
 const api = conApi()
 
@@ -13,7 +13,7 @@ const sumarDias = (f: string, d: number) => {
 }
 
 describe('reportes', () => {
-  let admin: Cliente, mozo: Cliente, cocina: Cliente
+  let admin: Cliente, mozo: Cliente, cocina: Cliente, caja: Cliente
   let c: ReturnType<typeof enCarta>
   let antes: any
   const notas: Pedido[] = []
@@ -24,7 +24,7 @@ describe('reportes', () => {
     const p = (await mozo.post<Pedido>(`/mesas/${await mesa(mozo, codigo)}/enviar`, { lineas })).datos
     for (const i of p.items) await cocina.post(`/cocina/items/${i.id}`, { listo: true })
     await mozo.post(`/pedidos/${p.id}/servir`)
-    const r = await mozo.post<Pedido>(`/pedidos/${p.id}/cobrar`, { pagos: pagos(p.total) })
+    const r = await caja.post<Pedido>(`/pedidos/${p.id}/cobrar`, { pagos: pagos(p.total) })
     assert.equal(r.estado, 200, r.texto)
     assert.equal(r.datos.estado, 'COBRADO')
     notas.push(r.datos)
@@ -35,6 +35,8 @@ describe('reportes', () => {
     admin = await ingresar(api.url, 'ADMIN')
     mozo = await ingresar(api.url, 'MOZO')
     cocina = await ingresar(api.url, 'COCINA')
+    caja = await ingresar(api.url, 'CAJA')
+    await cajaAbierta(caja)
     c = enCarta((await mozo.get<Carta>('/carta')).datos)
     antes = (await admin.get(`/reportes/dia?fecha=${hoy()}`)).datos
 
@@ -124,8 +126,8 @@ describe('reportes', () => {
     assert.match(r.cabeceras.get('content-type') ?? '', /text\/csv/)
     assert.match(r.cabeceras.get('content-disposition') ?? '', /attachment/)
     const [cabecera, fila, sobra] = r.texto.replace(/^﻿/, '').split('\r\n')
-    assert.match(cabecera, /^Nota;Cant;Producto;Familia;Adicional;Detalle;Obs;/)
-    assert.match(fila, new RegExp(`^${notas[0].id};2;Shawarma Huamanguina;`))
+    assert.match(cabecera, /^Sucursal;Nota;Cant;Producto;Familia;Adicional;Detalle;Obs;/)
+    assert.match(fila, new RegExp(`^Plaza More;${notas[0].id};2;Shawarma Huamanguina;`))
     assert.ok(fila.includes(MARCA))
     assert.equal(sobra, undefined)
   })

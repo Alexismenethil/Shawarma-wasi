@@ -4,6 +4,7 @@ import { mdiDownload } from '@mdi/js'
 import { codigoMesa } from '@wasi/shared'
 import { useRecurso } from '../../lib/recurso'
 import { useAjustes } from '../../lib/ajustes'
+import { useSucursal } from '../../lib/sucursal'
 import { fechaLarga, hora, hoyLima, soles } from '../../lib/formato'
 import { Boton } from '../../componentes/boton'
 import { textoDetalle } from '../mozo/filas'
@@ -20,17 +21,20 @@ export function ReporteDiario() {
   const hoy = hoyLima()
   const fecha = params.get('fecha') ?? hoy
   const { medios } = useAjustes()
+  const { id: vista, sucursales } = useSucursal()
+  const todas = !vista && sucursales.length > 1
   const { datos: d } = useRecurso<ReporteDia>(`/reportes/dia?fecha=${fecha}`, (c) => !!c.mesas)
   const nombre = (clave: string) => medios.find((m) => m.clave === clave)?.nombre ?? clave
   const pedidos = [...(d?.pedidos ?? [])].reverse()
 
   const descargar = () => {
     if (!d) return
-    const filas: (string | number | null)[][] = [['Nro', 'Hora', 'Mesa', 'Cant', 'Producto', 'Adicional', 'Detalle', 'Obs', 'Precio', 'PAdic', 'Subtotal', 'Total', 'Tipo Pago', 'Pago', 'Vuelto', 'Mozo']]
+    const filas: (string | number | null)[][] = [['Sucursal', 'Nro', 'Hora', 'Mesa', 'Cant', 'Producto', 'Adicional', 'Detalle', 'Obs', 'Precio', 'PAdic', 'Subtotal', 'Total', 'Tipo Pago', 'Pago', 'Vuelto', 'Mozo']]
     // El archivo lleva también el mozo; la pantalla lo omite para que la hoja quepa.
     pedidos.forEach((p, n) =>
       p.items.forEach((i, k) =>
         filas.push([
+          k === 0 ? p.sucursal : null,
           k === 0 ? n + 1 : null,
           k === 0 ? hora(p.cobradoEn) : null,
           k === 0 ? codigoMesa(p.mesa) : null,
@@ -72,6 +76,7 @@ export function ReporteDiario() {
             tono="rojo"
             alto="calc(100dvh - 220px)"
             columnas={[
+              ...(todas ? [{ titulo: 'Sucursal', ancho: '100px' }] : []),
               { titulo: 'Nro', ancho: '44px' },
               { titulo: 'Hora', ancho: '54px' },
               { titulo: 'Mesa', ancho: '54px' },
@@ -96,6 +101,7 @@ export function ReporteDiario() {
                 <Fragment key={p.id}>
                   {p.items.map((i, k) => (
                     <tr key={k} className={k === 0 ? '[&>td]:border-t-2 [&>td]:border-t-tinta-4' : ''}>
+                      {todas && <td className="truncate text-tinta-2">{k === 0 && p.sucursal}</td>}
                       <td className="text-center font-medium tabular-nums">{k === 0 && n + 1}</td>
                       <td className="text-center text-tinta-2 tabular-nums">{k === 0 && hora(p.cobradoEn)}</td>
                       <td className="text-center font-medium">{k === 0 && codigoMesa(p.mesa)}</td>
@@ -118,7 +124,7 @@ export function ReporteDiario() {
             })}
             {d && !pedidos.length && (
               <tr>
-                <td colSpan={15} className="h-24 text-center text-tinta-3">
+                <td colSpan={todas ? 16 : 15} className="h-24 text-center text-tinta-3">
                   No hay notas cobradas este día.
                 </td>
               </tr>

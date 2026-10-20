@@ -3,6 +3,7 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { prepararBasePrueba } from '../backend/scripts/base-prueba.mjs'
 
+const vercel = process.argv.includes('--vercel')
 const RAIZ = path.resolve(import.meta.dirname, '..')
 const env = await prepararBasePrueba()
 
@@ -12,5 +13,5 @@ const paso = (comando, args, extra = {}) => {
 }
 
 // La misma web y API que se despliegan.
-paso('npm', ['run', 'build'], { NODE_ENV: 'production' })
-paso('npx', ['playwright', 'test', '--config', 'e2e/playwright.config.ts', ...process.argv.slice(2)])
+paso('npm', ['run', vercel ? 'build:vercel' : 'build'], { NODE_ENV: 'production' })
+paso('npx', ['playwright', 'test', '--config', 'e2e/playwright.config.ts', ...process.argv.slice(2).filter((a) => a !== '--vercel')], { PRUEBA_VERCEL: vercel ? '1' : '0' })

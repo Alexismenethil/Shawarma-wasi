@@ -42,6 +42,7 @@ export interface LineaArqueo {
 }
 export interface PedidoArqueo {
   id: number
+  sucursal: string
   mesa: { numero: number; tipo: TipoMesa }
   cliente: string | null
   mozo: string | null
@@ -51,6 +52,16 @@ export interface PedidoArqueo {
   pagos: { metodo: string; monto: number; recibido: number | null }[]
   items: LineaArqueo[]
 }
+/** Cómo va una sucursal en el día: ventas, lo que tiene abierto y su caja. */
+export interface SucursalDelDia {
+  id: number
+  nombre: string
+  ventas: number
+  pedidos: number
+  ticketPromedio: number
+  enCurso: { pedidos: number; total: number }
+  caja: { estado: 'ABIERTA' | 'CERRADA'; abiertaPor: string; abiertaEn: string; cerradaEn: string | null; diferencia: number | null } | null
+}
 export interface ReporteDia {
   fecha: string
   totales: Totales
@@ -59,6 +70,8 @@ export interface ReporteDia {
   estaciones: PorEstacion[]
   masVendidos: Vendido[]
   enCurso: { pedidos: number; total: number }
+  /** Cada sucursal (o solo la elegida). */
+  sucursales: SucursalDelDia[]
   pedidos: PedidoArqueo[]
 }
 export interface ReporteRango {
@@ -71,6 +84,8 @@ export interface ReporteRango {
   estaciones: PorEstacion[]
   familias: { familia: string; unidades: number; monto: number }[]
   masVendidos: Vendido[]
+  /** Con todas las sucursales: cada una lado a lado. */
+  sucursales: { id: number; nombre: string; ventas: number; pedidos: number; ticketPromedio: number }[] | null
 }
 export interface Acumulado {
   mes: string
@@ -105,6 +120,7 @@ export interface FilaConsolidado {
   precioAdicionales: number
   subtotal: number
   total: number
+  sucursal: string
   mesaTipo: TipoMesa
   mesaNumero: number
   cliente: string | null

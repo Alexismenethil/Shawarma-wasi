@@ -20,11 +20,14 @@
     "db:deploy": "npm run db:deploy --workspace=backend",
     "db:seed": "npm run db:seed --workspace=backend",
     "db:demo": "npm run db:demo --workspace=backend",
+    "db:respaldo": "npm run db:respaldo --workspace=backend",
     "db:reset": "npm run db:reset --workspace=backend",
     "db:studio": "npm run db:studio --workspace=backend",
     "start": "npm run start --workspace=backend",
     "test": "npm run test --workspace=backend",
-    "test:e2e": "node e2e/correr.mjs"
+    "test:e2e": "node e2e/correr.mjs",
+    "build:vercel": "node scripts/vercel.mjs",
+    "test:vercel": "node e2e/correr.mjs --vercel"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
@@ -32,6 +35,6 @@
     "typescript": "^5.9.3"
   },
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   }
 }

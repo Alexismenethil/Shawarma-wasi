@@ -43,6 +43,35 @@ export function Ventas() {
         <Kpi color="magenta" icono={mdiSilverwareForkKnife} titulo="Platos vendidos" valor={d?.totales.unidades.toLocaleString('es-PE') ?? '…'} detalle={mejor && mejor.ventas > 0 && `Mejor día: ${fechaCorta(mejor.fecha)} (${solesCortos(mejor.ventas)})`} />
       </div>
 
+      {d?.sucursales && d.sucursales.length > 1 && (
+        <Panel titulo="Por sucursal" estilo="excel" color="#134f5c" relleno={false} className="mt-4">
+          <Tabla
+            tono="turquesa"
+            columnas={[{ titulo: 'Sucursal' }, { titulo: 'Pedidos', ancho: '90px' }, { titulo: 'Ventas', ancho: '120px' }, { titulo: 'Ticket prom.', ancho: '110px' }, { titulo: 'Parte', ancho: '160px' }]}
+          >
+            {d.sucursales.map((s) => {
+              const parte = d.totales.ventas ? s.ventas / d.totales.ventas : 0
+              return (
+                <tr key={s.id}>
+                  <td className="font-medium">{s.nombre}</td>
+                  <td className="text-center tabular-nums">{s.pedidos.toLocaleString('es-PE')}</td>
+                  <td className="text-right tabular-nums">{soles(s.ventas)}</td>
+                  <td className="text-right tabular-nums">{soles(s.ticketPromedio)}</td>
+                  <td>
+                    <span className="flex items-center gap-2">
+                      <span className="h-2.5 flex-1 bg-gris-150">
+                        <span className="block h-full bg-turquesa-2" style={{ width: `${Math.round(parte * 100)}%` }} />
+                      </span>
+                      <span className="w-10 text-right text-[13px] text-tinta-2 tabular-nums">{Math.round(parte * 100)}%</span>
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
+          </Tabla>
+        </Panel>
+      )}
+
       <Panel titulo="Tendencia de Ventas" className="mt-4">
         <Barras
           alto={260}

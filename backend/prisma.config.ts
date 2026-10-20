@@ -14,6 +14,6 @@ export default defineConfig({
   datasource: {
     // `prisma generate` no necesita la base (se corre al instalar, incluso en
     // un build sin variables); migrar y sembrar sí, y fallan claro si falta.
-    url: process.env.DATABASE_URL ?? '',
+    url: process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? '',
   },
 })

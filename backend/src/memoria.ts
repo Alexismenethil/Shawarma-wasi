@@ -1,3 +1,6 @@
+import { env } from './env.js'
+import { contexto } from './contexto.js'
+
 /**
  * Lo que todas las pantallas piden a cada rato y casi nunca cambia —la carta
  * y los datos del local— se calcula una vez y se guarda en memoria. Cuando
@@ -7,6 +10,8 @@
 const guardado = new Map<string, Promise<unknown>>()
 
 export function recordar<T>(clave: string, calcular: () => Promise<T>): Promise<T> {
+  // Vercel no comparte memoria. Los datos sin confirmar tampoco se cachean.
+  if (env.sinServidor || contexto.getStore()) return calcular()
   let valor = guardado.get(clave) as Promise<T> | undefined
   if (!valor) {
     valor = calcular()
@@ -17,6 +22,9 @@ export function recordar<T>(clave: string, calcular: () => Promise<T>): Promise<
   return valor
 }
 
+/** Olvida cada clave y las que cuelgan de ella: «carta» se lleva también «carta:2». */
 export function olvidar(...claves: string[]) {
-  for (const c of claves) guardado.delete(c)
+  for (const k of [...guardado.keys()]) {
+    if (claves.some((c) => k === c || k.startsWith(`${c}:`))) guardado.delete(k)
+  }
 }

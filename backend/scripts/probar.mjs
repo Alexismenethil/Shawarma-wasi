@@ -8,7 +8,7 @@ import { prepararBasePrueba } from './base-prueba.mjs'
 const BACKEND = path.resolve(import.meta.dirname, '..')
 const env = await prepararBasePrueba()
 const archivos = readdirSync(path.join(BACKEND, 'test'))
-  .filter((a) => a.endsWith('.test.ts'))
+  .filter((a) => a.endsWith('.test.ts') && (process.argv.length === 2 || process.argv.slice(2).some((f) => a.includes(f))))
   .sort()
   .map((a) => path.join('test', a))
 

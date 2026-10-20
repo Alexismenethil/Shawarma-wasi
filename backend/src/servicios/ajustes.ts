@@ -5,9 +5,10 @@ import { prisma } from '../db.js'
 import { ErrorNegocio } from '../errores.js'
 import { recordar } from '../memoria.js'
 import { avisar } from '../tiempo-real.js'
+import { leerSucursales } from './sucursales.js'
 
 /**
- * Los datos del local y las listas cortas que antes vivían fijas en el código:
+ * Los datos del negocio y las listas cortas que antes vivían fijas en el código:
  * los medios de pago («Tipo y Monto de Pago» de la nota) y los detalles (la
  * hoja «Detalle» del Excel). Todo se edita en Administración y cada cambio
  * avisa a las pantallas para que se pongan al día solas.
@@ -38,27 +39,27 @@ const serializarMedio = (m: MedioPago): MedioPago => ({
   activo: m.activo,
 })
 
-/** Los datos del local se leen de la base solo cuando cambian (ver memoria.ts). */
+/** Los datos del negocio se leen de la base solo cuando cambian (ver memoria.ts). */
 export function leerAjustes(): Promise<Ajustes> {
   return recordar('ajustes', leerDeLaBase)
 }
 
 async function leerDeLaBase(): Promise<Ajustes> {
-  const [a, medios] = await Promise.all([
+  const [a, medios, sucursales] = await Promise.all([
     fila(),
     prisma.medioPago.findMany({ where: { activo: true }, orderBy: [{ orden: 'asc' }, { id: 'asc' }] }),
+    leerSucursales(),
   ])
   return {
     nombre: a.nombre,
     subtitulo: a.subtitulo,
-    direccion: a.direccion,
-    telefono: a.telefono,
     ruc: a.ruc,
     pieNota: a.pieNota,
     estaciones: nombresEstaciones(a.estaciones),
     observaciones: a.observaciones,
     minutosAlerta: a.minutosAlerta,
     medios: medios.map(serializarMedio),
+    sucursales: sucursales.filter((s) => s.activa).map(({ activa: _activa, ...s }) => s),
   }
 }
 
@@ -66,8 +67,6 @@ export async function actualizarAjustes(
   datos: Partial<{
     nombre: string
     subtitulo: string
-    direccion: string
-    telefono: string
     ruc: string
     pieNota: string
     estaciones: Partial<Record<Estacion, string>>

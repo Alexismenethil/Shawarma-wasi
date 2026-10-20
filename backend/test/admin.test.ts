@@ -1,7 +1,7 @@
 import { before, describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import type { Ajustes, Carta, Pedido } from '@wasi/shared'
-import { Cliente, type Respuesta, conApi, enCarta, ingresar, linea, mesa } from './ayuda.js'
+import { Cliente, type Respuesta, cajaAbierta, conApi, enCarta, ingresar, linea, mesa, otraIp } from './ayuda.js'
 
 const api = conApi()
 
@@ -136,7 +136,9 @@ describe('administración: todo se edita', () => {
 
     it('uno con cobros no se borra, y siempre queda al menos uno activo', async () => {
       const p = (await mozo.post<Pedido>(`/mesas/${await mesa(mozo, 'M17')}/enviar`, { lineas: [linea(enCarta((await mozo.get<Carta>('/carta')).datos).producto('Shawarma', 'Clásica').id)] })).datos
-      ok(await mozo.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'EFECTIVO', monto: p.total }] }))
+      const caja = await ingresar(api.url, 'CAJA')
+      await cajaAbierta(caja)
+      ok(await caja.post(`/pedidos/${p.id}/cobrar`, { pagos: [{ metodo: 'EFECTIVO', monto: p.total }] }))
       const medios = (await admin.get('/admin/medios')).datos as { id: number; clave: string; pagos: number; activo: boolean }[]
       const efectivo = medios.find((x) => x.clave === 'EFECTIVO')!
       assert.ok(efectivo.pagos > 0)
@@ -148,11 +150,10 @@ describe('administración: todo se edita', () => {
     })
   })
 
-  describe('datos del local', () => {
+  describe('datos generales', () => {
     it('nombre, cocinas, observaciones y alerta se guardan y los ve todo el mundo', async () => {
       const r = await admin.patch<Ajustes>('/admin/ajustes', {
         subtitulo: 'Comida peruana',
-        direccion: 'Jr. Asamblea 123, Huamanga',
         estaciones: { BEBIDAS: 'Bebidas calientes' },
         observaciones: ['Sin ají', 'Sin ají', '  ', 'Extra cremas'],
         minutosAlerta: 20,
@@ -165,20 +166,35 @@ describe('administración: todo se edita', () => {
       assert.deepEqual(publicos.observaciones, ['Sin ají', 'Extra cremas'])
       assert.equal(publicos.minutosAlerta, 20)
       assert.equal((await admin.patch('/admin/ajustes', { nombre: '' })).estado, 400)
-      ok(await admin.patch('/admin/ajustes', { subtitulo: 'Peruvian Cuisine', direccion: '', estaciones: { BEBIDAS: 'Emolientes y bebidas' }, minutosAlerta: 15 }))
+      ok(await admin.patch('/admin/ajustes', { subtitulo: 'Peruvian Cuisine', estaciones: { BEBIDAS: 'Emolientes y bebidas' }, minutosAlerta: 15 }))
     })
   })
 
   describe('equipo', () => {
-    it('agregar personas con PIN propio, sin repetir PIN', async () => {
-      const m = await admin.post('/admin/equipo', { nombre: 'María Quispe', rol: 'MOZO', pin: '3141' })
+    it('agregar personas con PIN propio, sin repetir PIN en la sucursal', async () => {
+      const m = await admin.post('/admin/equipo', { nombre: 'María Quispe', rol: 'MOZO', sucursalId: 1, pin: '3141' })
       ok(m)
-      assert.equal((await admin.post('/admin/equipo', { nombre: 'Otra', rol: 'COCINA', pin: '3141' })).estado, 409)
-      const r = await new Cliente(api.url).pedir('POST', '/api/auth/ingresar', { rol: 'MOZO', pin: '3141' }, { 'x-forwarded-for': '10.8.0.1' })
+      assert.equal(m.datos.sucursalId, 1)
+      assert.equal((await admin.post('/admin/equipo', { nombre: 'Otra', rol: 'COCINA', sucursalId: 1, pin: '3141' })).estado, 409)
+      // Sin sucursal, el personal con PIN no se puede crear.
+      assert.equal((await admin.post('/admin/equipo', { nombre: 'Sin local', rol: 'MOZO', pin: '7777' })).estado, 400)
+      const r = await new Cliente(api.url).pedir('POST', '/api/auth/ingresar', { area: 'MOZO', sucursalId: 1, pin: '3141' }, { 'x-forwarded-for': otraIp() })
       assert.equal(r.datos.usuario.nombre, 'María Quispe')
     })
 
-    it('desactivar cierra la sesión al instante; volver exige PIN nuevo', async () => {
+    it('la encargada y otros administradores entran con usuario y contraseña', async () => {
+      assert.equal((await admin.post('/admin/equipo', { nombre: 'Sin clave', rol: 'ENCARGADO', sucursalId: 1, pin: '1212' })).estado, 400)
+      const e = await admin.post('/admin/equipo', { nombre: 'Lucía', rol: 'ENCARGADO', sucursalId: 1, usuario: 'Lucia', clave: 'clave-de-lucia' })
+      ok(e)
+      assert.equal(e.datos.usuario, 'lucia')
+      assert.equal((await admin.post('/admin/equipo', { nombre: 'Otra Lucía', rol: 'ADMIN', usuario: 'lucia', clave: 'otra-clave-1' })).estado, 409)
+      const r = await new Cliente(api.url).pedir('POST', '/api/auth/entrar', { usuario: 'lucia', clave: 'clave-de-lucia' }, { 'x-forwarded-for': otraIp() })
+      assert.equal(r.estado, 200, r.texto)
+      assert.equal(r.datos.usuario.rol, 'ENCARGADO')
+      assert.equal(r.datos.usuario.sucursalId, 1)
+    })
+
+    it('desactivar cierra la sesión al instante; para volver se escribe su PIN otra vez', async () => {
       const lista = (await admin.get('/admin/equipo')).datos as { id: number; nombre: string }[]
       const maria = lista.find((x) => x.nombre === 'María Quispe')!
       const sesion = await ingresar(api.url, 'MOZO', '3141')
@@ -187,6 +203,11 @@ describe('administración: todo se edita', () => {
       assert.equal((await sesion.get('/mesas')).estado, 401)
       assert.equal((await admin.patch(`/admin/equipo/${maria.id}`, { activo: true })).estado, 400)
       ok(await admin.patch(`/admin/equipo/${maria.id}`, { activo: true, pin: '2718' }))
+      // Pasar a otra área que entra con contraseña exige usuario y contraseña; volver a PIN, un PIN.
+      assert.equal((await admin.patch(`/admin/equipo/${maria.id}`, { rol: 'ENCARGADO' })).estado, 400)
+      ok(await admin.patch(`/admin/equipo/${maria.id}`, { rol: 'ENCARGADO', usuario: 'maria', clave: 'clave-de-maria' }))
+      assert.equal((await admin.patch(`/admin/equipo/${maria.id}`, { rol: 'CAJA' })).estado, 400)
+      ok(await admin.patch(`/admin/equipo/${maria.id}`, { rol: 'MOZO', pin: '2718' }))
     })
 
     it('nadie se desactiva a sí mismo y siempre queda un administrador', async () => {

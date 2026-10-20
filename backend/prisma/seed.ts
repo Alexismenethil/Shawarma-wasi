@@ -1,15 +1,20 @@
+import { randomInt } from 'node:crypto'
+import { writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import path from 'node:path'
 import type { Estacion } from '@prisma/client'
 import { prisma } from '../src/db.js'
-import { cifrarPin } from '../src/servicios/auth.js'
+import { cifrar, conPin } from '../src/servicios/auth.js'
 
 /**
- * Semilla: la carta, los adicionales, las mesas, los insumos y las recetas del
- * Excel «Nota de Pedidos», más un usuario por área.
+ * Semilla: la carta, los adicionales, los insumos y las recetas del Excel
+ * «Nota de Pedidos», y en una base nueva las sucursales (con su cocina
+ * compartida), sus mesas y sus cuentas.
  *
  * Es idempotente y conservadora: la carta solo se carga si la base no tiene
  * ninguna familia, porque después la manda el panel. Correrla sobre una base
- * en uso no pisa precios ni productos.
+ * en uso no pisa precios, productos, sucursales ni personal: solo completa lo
+ * que falta (la contraseña del administrador y el usuario de caja, al actualizar).
  */
 
 const require = createRequire(import.meta.url)
@@ -169,39 +174,235 @@ async function sembrarCarta() {
   console.log(`  carta: ${FAMILIAS.length} familias, ${datos.productos.length} productos, ${datos.adicionales.length} adicionales`)
 }
 
-async function sembrarMesas() {
-  // Como en el Excel: hojas M1…M25 para el salón y L1…L10 para llevar.
-  for (let n = 1; n <= 25; n++) {
-    await prisma.mesa.upsert({ where: { tipo_numero: { tipo: 'SALON', numero: n } }, update: {}, create: { tipo: 'SALON', numero: n } })
-  }
-  for (let n = 1; n <= 10; n++) {
-    await prisma.mesa.upsert({ where: { tipo_numero: { tipo: 'LLEVAR', numero: n } }, update: {}, create: { tipo: 'LLEVAR', numero: n } })
-  }
-  console.log('  mesas: 25 de salón y 10 para llevar')
-}
+/**
+ * Las sucursales con que arranca el negocio. Plaza More y Plaza San Cristóbal
+ * están en la misma ciudad y, por ahora, comparten la cocina de Plaza More
+ * para la carta y los shawarmas; los emolientes los prepara cada local. La 3.ª
+ * queda lista, con sus mesas y su personal, pero apagada hasta que abra. Todo
+ * se cambia después en Administración → Sucursales.
+ */
+const SUCURSALES: { nombre: string; encargado: string; activa?: boolean; cocinaEn?: string; compartidas?: Estacion[] }[] = [
+  { nombre: 'Plaza More', encargado: 'more' },
+  { nombre: 'Plaza San Cristóbal', encargado: 'sancristobal', cocinaEn: 'Plaza More', compartidas: ['CARTA', 'SHAWARMAS'] },
+  { nombre: 'Sucursal 3', encargado: 'sucursal3', activa: false },
+]
 
-async function sembrarUsuarios() {
-  if ((await prisma.usuario.count()) > 0) {
-    console.log('  personal: ya existe, no se toca')
-    return
-  }
-  const pines = { MOZO: process.env.SEED_PIN_MOZO, COCINA: process.env.SEED_PIN_COCINA, ADMIN: process.env.SEED_PIN_ADMIN }
-  for (const [rol, pin] of Object.entries(pines)) {
-    if (!pin) throw new Error(`Falta SEED_PIN_${rol} en el .env`)
-  }
-  await prisma.usuario.createMany({
+async function sembrarMesas(sucursalId: number) {
+  if ((await prisma.mesa.count({ where: { sucursalId } })) > 0) return false
+  // Como en el Excel: hojas M1…M25 para el salón y L1…L10 para llevar.
+  await prisma.mesa.createMany({
     data: [
-      { nombre: 'Mozo', rol: 'MOZO', pinHash: cifrarPin(pines.MOZO!) },
-      { nombre: 'Cocina', rol: 'COCINA', pinHash: cifrarPin(pines.COCINA!) },
-      { nombre: 'Administración', rol: 'ADMIN', pinHash: cifrarPin(pines.ADMIN!) },
+      ...Array.from({ length: 25 }, (_, i) => ({ sucursalId, tipo: 'SALON' as const, numero: i + 1 })),
+      ...Array.from({ length: 10 }, (_, i) => ({ sucursalId, tipo: 'LLEVAR' as const, numero: i + 1 })),
     ],
   })
-  console.log('  personal: mozo, cocina y administración (PIN del .env)')
+  return true
+}
+
+function exigirVariable(nombre: string) {
+  const v = process.env[nombre]
+  if (!v) throw new Error(`Falta ${nombre} en el .env`)
+  return v
+}
+
+/** Una contraseña fácil de teclear en una tablet y difícil de adivinar: «k7mq-4tpx-9wfa». */
+const LETRAS = 'abcdefghjkmnpqrstuvwxyz23456789'
+const claveAlAzar = () => Array.from({ length: 3 }, () => Array.from({ length: 4 }, () => LETRAS[randomInt(LETRAS.length)]).join('')).join('-')
+
+type Pines = { MOZO: string; COCINA: string; CAJA: string }
+
+interface Cuentas {
+  admin: { usuario: string; clave: string }
+  sucursales: { nombre: string; activa: boolean; cocinaEn?: string; compartidas?: Estacion[]; encargado: { usuario: string; clave: string }; pins: Pines }[]
+}
+
+/** 1111, 1234, 9876: los que se prueban primero. */
+const facil = (p: string) => /^(\d)\1{3}$/.test(p) || '0123456789'.includes(p) || '9876543210'.includes(p)
+
+/**
+ * Ningún PIN se repite entre sucursales (con el de un local no se entra a
+ * otro): la primera sucursal usa los PIN del .env y las demás reciben otros,
+ * al azar, o los de SEED_PINES_OTRAS («7101,7102,7103,7201,…», de tres en
+ * tres: mozo, cocina y caja de cada sucursal), que usan las pruebas.
+ */
+function repartirPines(primera: Pines) {
+  const usados = new Set(Object.values(primera))
+  const dados = (process.env.SEED_PINES_OTRAS ?? '').split(',').map((p) => p.trim()).filter(Boolean)
+  const otro = () => {
+    const dado = dados.shift()
+    if (dado && (!/^\d{4}$/.test(dado) || usados.has(dado))) throw new Error(`SEED_PINES_OTRAS: ${dado} no es un PIN de 4 cifras libre`)
+    let pin = dado ?? ''
+    while (!pin) {
+      const azar = String(randomInt(1000, 10000))
+      if (!usados.has(azar) && !facil(azar)) pin = azar
+    }
+    usados.add(pin)
+    return pin
+  }
+  return (i: number): Pines => (i === 0 ? primera : { MOZO: otro(), COCINA: otro(), CAJA: otro() })
+}
+
+/**
+ * Base nueva (el primer deploy): las sucursales con su cocina, sus mesas y su
+ * personal. El dueño entra con el usuario y la contraseña del .env; en cada
+ * sucursal, un encargado con contraseña al azar y mozo, cocina y caja con su
+ * PIN (ninguno se repite entre sucursales, ver `repartirPines`).
+ */
+async function sembrarNegocio(): Promise<Cuentas> {
+  const pins = { MOZO: exigirVariable('SEED_PIN_MOZO'), COCINA: exigirVariable('SEED_PIN_COCINA'), CAJA: exigirVariable('SEED_PIN_CAJA') }
+  if (Object.values(pins).some((p) => !/^\d{4}$/.test(p))) throw new Error('Los SEED_PIN_* son de 4 cifras')
+  if (new Set(Object.values(pins)).size < 3) throw new Error('SEED_PIN_MOZO, SEED_PIN_COCINA y SEED_PIN_CAJA tienen que ser distintos')
+  const pinesDe = repartirPines(pins)
+  const admin = { usuario: (process.env.SEED_ADMIN_USUARIO ?? 'admin').trim().toLowerCase(), clave: exigirVariable('SEED_ADMIN_CLAVE') }
+  if (admin.clave.length < 8) throw new Error('SEED_ADMIN_CLAVE debe tener al menos 8 caracteres')
+
+  // La migración deja creada la primera sucursal («Principal»): se le pone su nombre.
+  const existentes = await prisma.sucursal.findMany({ orderBy: { id: 'asc' } })
+  const ids = new Map<string, number>()
+  for (const [i, s] of SUCURSALES.entries()) {
+    const datos = { nombre: s.nombre, activa: s.activa ?? true }
+    const fila = existentes[i] ? await prisma.sucursal.update({ where: { id: existentes[i].id }, data: datos }) : await prisma.sucursal.create({ data: datos })
+    ids.set(s.nombre, fila.id)
+  }
+  for (const s of SUCURSALES) {
+    if (s.cocinaEn) await prisma.sucursal.update({ where: { id: ids.get(s.nombre)! }, data: { cocinaEnId: ids.get(s.cocinaEn)!, cocinasCompartidas: s.compartidas ?? [] } })
+  }
+
+  await prisma.usuario.create({ data: { nombre: 'Administración', rol: 'ADMIN', usuario: admin.usuario, claveHash: cifrar(admin.clave) } })
+  const cuentas: Cuentas = { admin, sucursales: [] }
+  for (const [i, s] of SUCURSALES.entries()) {
+    const sucursalId = ids.get(s.nombre)!
+    await sembrarMesas(sucursalId)
+    const encargado = { usuario: s.encargado, clave: claveAlAzar() }
+    const suyos = pinesDe(i)
+    await prisma.usuario.createMany({
+      data: [
+        { nombre: 'Mozo', rol: 'MOZO', sucursalId, pinHash: cifrar(suyos.MOZO) },
+        { nombre: 'Cocina', rol: 'COCINA', sucursalId, pinHash: cifrar(suyos.COCINA) },
+        { nombre: 'Caja', rol: 'CAJA', sucursalId, pinHash: cifrar(suyos.CAJA) },
+        { nombre: `Encargado ${s.nombre}`, rol: 'ENCARGADO', sucursalId, usuario: encargado.usuario, claveHash: cifrar(encargado.clave) },
+      ],
+    })
+    cuentas.sucursales.push({ nombre: s.nombre, activa: s.activa ?? true, cocinaEn: s.cocinaEn, compartidas: s.compartidas, encargado, pins: suyos })
+    const cocina = s.cocinaEn ? ` · ${(s.compartidas ?? []).join(' y ').toLowerCase()} en la cocina de ${s.cocinaEn}` : ''
+    const pines = i === 0 ? 'PIN del .env' : 'PIN propios'
+    console.log(`  ${s.nombre}${s.activa === false ? ' (apagada hasta que abra)' : ''}: 25 mesas y 10 para llevar, mozo, cocina y caja (${pines}) y encargado «${s.encargado}»${cocina}`)
+  }
+  console.log(`  administración: usuario «${admin.usuario}» (contraseña del .env)`)
+  return cuentas
+}
+
+/**
+ * Las cuentas recién creadas, en un archivo privado junto al proyecto (no se
+ * sube a git: *.local.md). Uno por base, para no pisar las de desarrollo con
+ * las de producción. Con SEED_CUENTAS=no (las pruebas) no se escribe.
+ */
+function escribirCuentas(c: Cuentas) {
+  if (process.env.SEED_CUENTAS === 'no') return
+  const url = new URL(process.env.DATABASE_URL ?? 'postgresql://localhost/base')
+  const base = url.pathname.slice(1) || 'base'
+  const archivo = path.resolve(import.meta.dirname, '..', '..', `cuentas-${base}.local.md`)
+  const fecha = new Date().toLocaleString('es-PE', { timeZone: 'America/Lima', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+  const nombreCocina = { CARTA: 'carta', SHAWARMAS: 'shawarmas', BEBIDAS: 'emolientes y bebidas' } as const
+  const lineas = [
+    '# Cuentas iniciales · Shawarma Wasi',
+    '',
+    `Base \`${base}\` en \`${url.host}\` · creadas el ${fecha}.`,
+    '',
+    '> Privado: este archivo no se sube a git. Entrégale a cada quien solo lo suyo. Cada',
+    '> encargado cambia su contraseña en el panel (menú con su nombre → «Cambiar mi',
+    '> contraseña»).',
+    '',
+    '## Administración (dueño): todas las sucursales',
+    '',
+    'Entra en **Administración** con usuario y contraseña. Arriba elige «Todas las sucursales» o una.',
+    '',
+    '| Usuario | Contraseña |',
+    '| --- | --- |',
+    `| \`${c.admin.usuario}\` | \`${c.admin.clave}\` |`,
+    '',
+    '## Cada sucursal',
+    '',
+    'Mozo, Cocina y Caja eligen su sucursal en la entrada y teclean su PIN. El encargado entra en',
+    '**Administración** con usuario y contraseña y ve solo su sucursal.',
+    '',
+    '| Sucursal | Encargado: usuario | Encargado: contraseña | Mozo: PIN | Cocina: PIN | Caja: PIN |',
+    '| --- | --- | --- | --- | --- | --- |',
+    ...c.sucursales.map(
+      (s) =>
+        `| ${s.nombre}${s.activa ? '' : ' (apagada)'} | \`${s.encargado.usuario}\` | \`${s.encargado.clave}\` | ${s.pins.MOZO} | ${s.pins.COCINA} | ${s.pins.CAJA} |`,
+    ),
+    '',
+    '## Los PIN',
+    '',
+    '- **Ningún PIN se repite, ni entre sucursales**: con el PIN de un local no se entra a otro, aunque',
+    '  la tablet tenga elegida la sucursal equivocada (avisa «PIN incorrecto» y que revise la sucursal).',
+    '- Mozo, Cocina y Caja de arriba son cuentas para empezar y probar. Al personal real se le registra',
+    '  en Administración → Equipo con su propio PIN (lo usual: los últimos 4 dígitos de su DNI). Si un',
+    '  DNI termina igual que uno de estos PIN, primero desactiva la cuenta de prueba: así queda libre.',
+    '',
+    '## Cocina compartida (temporal)',
+    '',
+    ...c.sucursales
+      .filter((s) => s.cocinaEn)
+      .map(
+        (s) =>
+          `- **${s.nombre}** manda ${(s.compartidas ?? []).map((e) => nombreCocina[e]).join(' y ')} a la cocina de **${s.cocinaEn}**: allí salen en la misma pantalla que los de ${s.cocinaEn}, cada comanda con el nombre de su local. Sus emolientes y bebidas los prepara su propia cocina (pestaña «Cocina 3»).`,
+      ),
+    '- Se deshace en Administración → Sucursales → columna «Cocina» → «Cocina propia».',
+    ...(c.sucursales.some((s) => !s.activa)
+      ? ['', 'Las sucursales apagadas no aparecen en las tablets ni en los reportes: se activan en Administración → Sucursales el día que abren.']
+      : []),
+    '',
+  ]
+  writeFileSync(archivo, lineas.join('\n'))
+  console.log(`  cuentas: ${path.relative(process.cwd(), archivo)} (privado, no se sube a git)`)
+}
+
+/**
+ * Una base en uso: no se tocan sucursales ni personal. Solo se completa lo que
+ * falta después de actualizar el sistema: la contraseña del administrador
+ * (antes entraba con PIN), alguien de caja y las mesas de la primera sucursal.
+ */
+async function completarBaseEnUso() {
+  const primera = await prisma.sucursal.findFirst({ orderBy: { id: 'asc' } })
+  if (!primera) throw new Error('La base tiene personal pero ninguna sucursal: revisa las migraciones')
+  if (await sembrarMesas(primera.id)) console.log(`  mesas: 25 de salón y 10 para llevar en ${primera.nombre}`)
+  const usuarioAdmin = (process.env.SEED_ADMIN_USUARIO ?? 'admin').trim().toLowerCase()
+
+  const sinClave = await prisma.usuario.findMany({ where: { rol: 'ADMIN', activo: true, claveHash: null }, orderBy: { id: 'asc' } })
+  if (sinClave.length && (await prisma.usuario.count({ where: { rol: 'ADMIN', activo: true, claveHash: { not: null } } })) === 0) {
+    const clave = process.env.SEED_ADMIN_CLAVE
+    if (clave && clave.length >= 8) {
+      const libre = !(await prisma.usuario.findFirst({ where: { usuario: usuarioAdmin, id: { not: sinClave[0].id } } }))
+      await prisma.usuario.update({
+        where: { id: sinClave[0].id },
+        data: { claveHash: cifrar(clave), ...(libre && { usuario: usuarioAdmin }) },
+      })
+      console.log(`  administración: ahora entra con usuario «${libre ? usuarioAdmin : sinClave[0].usuario}» y la contraseña del .env`)
+    } else {
+      console.log('  ¡ojo! el administrador todavía no tiene contraseña: pon SEED_ADMIN_CLAVE en el .env o corre `npm run clave -w backend`')
+    }
+  }
+
+  const pinCaja = process.env.SEED_PIN_CAJA
+  if (pinCaja && (await prisma.usuario.count({ where: { rol: 'CAJA' } })) === 0) {
+    // Ningún PIN se repite, ni entre sucursales.
+    const ocupado = await conPin(pinCaja, await prisma.usuario.findMany({ where: { activo: true, pinHash: { not: null } } }))
+    if (ocupado) {
+      console.log('  ¡ojo! SEED_PIN_CAJA ya lo usa otra persona: agrega a caja desde Administración → Equipo')
+    } else {
+      await prisma.usuario.create({ data: { nombre: 'Caja', rol: 'CAJA', sucursalId: primera.id, pinHash: cifrar(pinCaja) } })
+      console.log('  caja: agregado el usuario Caja (PIN del .env)')
+    }
+  } else {
+    console.log('  sucursales y personal: ya existen, no se tocan')
+  }
 }
 
 console.log('\n  Shawarma Wasi · semilla')
 await sembrarCarta()
-await sembrarMesas()
-await sembrarUsuarios()
+if ((await prisma.usuario.count()) === 0) escribirCuentas(await sembrarNegocio())
+else await completarBaseEnUso()
 await prisma.$disconnect()
 console.log('  listo\n')

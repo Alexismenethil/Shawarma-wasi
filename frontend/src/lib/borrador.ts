@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react'
 import type { Carta, FamiliaCarta, LineaNueva, ProductoCarta } from '@wasi/shared'
+import { idAlAzar } from './azar'
 
 /**
  * Lo que el mozo va anotando en la nota antes de pulsar «Guardar».
@@ -22,7 +23,7 @@ let version = 0
 function sanear(l: Partial<LineaBorrador>): LineaBorrador | null {
   if (!l || typeof l !== 'object' || (!l.productoId && !l.libre)) return null
   return {
-    clave: typeof l.clave === 'string' ? l.clave : crypto.randomUUID(),
+    clave: typeof l.clave === 'string' ? l.clave : idAlAzar(),
     productoId: l.productoId ?? null,
     ...(l.libre && { libre: l.libre }),
     cantidad: Math.max(1, Math.min(99, Number(l.cantidad) || 1)),
@@ -84,7 +85,7 @@ export function useBorrador(mesaId: number, paraLlevarPorDefecto: boolean) {
   const agregar = useCallback(
     (p: ProductoCarta, extra: Partial<LineaNueva> = {}) => {
       const nueva: LineaBorrador = {
-        clave: crypto.randomUUID(),
+        clave: idAlAzar(),
         productoId: p.id,
         cantidad: 1,
         adicionales: [],
@@ -104,7 +105,7 @@ export function useBorrador(mesaId: number, paraLlevarPorDefecto: boolean) {
       escribir(mesaId, [
         ...leer(mesaId),
         {
-          clave: crypto.randomUUID(),
+          clave: idAlAzar(),
           productoId: null,
           libre,
           cantidad: 1,

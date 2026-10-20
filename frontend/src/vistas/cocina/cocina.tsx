@@ -1,12 +1,13 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { mdiBroom, mdiCheckAll, mdiFullscreen, mdiVolumeHigh, mdiVolumeOff } from '@mdi/js'
-import type { ComandaCocina, Estacion, ItemPedido } from '@wasi/shared'
-import { ESTACIONES, NUMERO_ESTACION, codigoMesa } from '@wasi/shared'
+import type { ComandaCocina, Estacion, ItemPedido, Sucursal } from '@wasi/shared'
+import { ESTACIONES, NUMERO_ESTACION, codigoMesa, juntasEnCocina } from '@wasi/shared'
 import { api } from '../../lib/api'
 import { useRecurso } from '../../lib/recurso'
 import { useCambios } from '../../lib/tiempo-real'
 import { useAjustes, nombreCocina } from '../../lib/ajustes'
+import { useSucursal } from '../../lib/sucursal'
 import { hora, minutosDesde, useAhora } from '../../lib/formato'
 import { audioDespierto, despertarAudio, estaSilenciado, silenciar, sonarComanda } from '../../lib/sonido'
 import { avisar } from '../../componentes/avisos'
@@ -58,12 +59,35 @@ const FRANJA: Record<Estacion, string> = { CARTA: 'bg-naranja', SHAWARMAS: 'bg-v
 
 /** Las columnas de la hoja; la cabecera y las filas las comparten. */
 const COLUMNAS = 'lg:grid lg:grid-cols-[58px_74px_minmax(0,0.9fr)_54px_minmax(0,1.9fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.1fr)_92px_140px_44px]'
+/** Con la cocina compartida, la hoja suma la columna «Local:» después del número. */
+const COLUMNAS_LOCAL =
+  'lg:grid lg:grid-cols-[58px_116px_74px_minmax(0,0.9fr)_54px_minmax(0,1.9fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.1fr)_92px_140px_44px]'
+const TITULOS = ['Nro:', 'Mesa:', 'Cliente:', 'Cant:', 'Producto:', 'Adicional:', 'Detalle:', 'Obs:', 'Hora:', 'Estado:', 'Ad']
+
+/**
+ * Cocina compartida: cada local con su color de celda, siempre el mismo, para
+ * que el cocinero y el mozo vean de un vistazo a dónde va cada comanda.
+ */
+const COLOR_LOCAL = ['bg-azul-oscuro', 'bg-magenta', 'bg-oliva', 'bg-verde-3']
+const colorLocal = (id: number) => COLOR_LOCAL[(id - 1) % COLOR_LOCAL.length]
+type Local = { nombre: string; color: string }
 
 export function Cocina() {
   const [params, setParams] = useSearchParams()
   const vista: Vista = (params.get('e') as Vista | null) ?? leerVista()
   const ajustes = useAjustes()
+  const { id: sucursalId, sucursales } = useSucursal()
   const [limpiado, setLimpiado] = useState(() => leerLimpiado(vista))
+
+  // Los locales cuyas comandas salen en esta hoja: más de uno = cocina compartida, y cada comanda lleva su local.
+  const locales = useMemo<Sucursal[]>(() => {
+    if (!sucursalId) return []
+    const ids = new Set((vista === 'TODAS' ? ESTACIONES : [vista]).flatMap((e) => juntasEnCocina(sucursales, sucursalId, e)))
+    return sucursales.filter((s) => ids.has(s.id))
+  }, [sucursales, sucursalId, vista])
+  const compartida = locales.length > 1
+  const localDe = (id: number): Local | null =>
+    compartida ? { nombre: sucursales.find((s) => s.id === id)?.nombre ?? `Sucursal ${id}`, color: colorLocal(id) } : null
   const ruta = `/cocina?${new URLSearchParams({ ...(vista !== 'TODAS' && { estacion: vista }), ...(limpiado && { desde: limpiado }) })}`
   const { datos, error, recargar } = useRecurso<ComandaCocina[]>(ruta, (c) => !!c.cocina)
   const ahora = useAhora(15_000)
@@ -228,9 +252,20 @@ export function Cocina() {
               )}
             </span>
           </div>
+          {compartida && (
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-b border-reja bg-gris-50 px-3 py-1.5 text-[13px] text-tinta-2">
+              <span>Cocina compartida:</span>
+              {locales.map((s) => (
+                <span key={s.id} className={`px-2 py-0.5 text-[12.5px] font-bold text-white ${colorLocal(s.id)}`}>
+                  {s.nombre}
+                </span>
+              ))}
+              <span className="text-tinta-3">cada comanda dice a qué local va</span>
+            </div>
+          )}
 
-          <div className={`cabecera hidden bg-verde-2 ${COLUMNAS}`}>
-            {['Nro:', 'Mesa:', 'Cliente:', 'Cant:', 'Producto:', 'Adicional:', 'Detalle:', 'Obs:', 'Hora:', 'Estado:', 'Ad'].map((t) => (
+          <div className={`cabecera hidden bg-verde-2 ${compartida ? COLUMNAS_LOCAL : COLUMNAS}`}>
+            {(compartida ? [TITULOS[0], 'Local:', ...TITULOS.slice(1)] : TITULOS).map((t) => (
               <span key={t} className="flex h-9 items-center justify-center border-r border-white/15 px-1 text-[13px] last:border-r-0">
                 {t}
               </span>
@@ -247,6 +282,7 @@ export function Cocina() {
                 alerta={ajustes.minutosAlerta}
                 nueva={nuevas.has(c.clave)}
                 cocina={vista === 'TODAS' ? `Cocina ${NUMERO_ESTACION[c.items[0].estacion]}` : null}
+                local={localDe(c.sucursalId)}
                 alMarcar={marcar}
                 alAtenderTodo={() => void atenderTodo(c)}
               />
@@ -280,6 +316,7 @@ function GrupoComanda({
   alerta,
   nueva,
   cocina,
+  local,
   alMarcar,
   alAtenderTodo,
 }: {
@@ -288,6 +325,8 @@ function GrupoComanda({
   alerta: number
   nueva: boolean
   cocina: string | null
+  /** Cocina compartida: el local al que va la comanda. */
+  local: Local | null
   alMarcar: (item: ItemPedido, listo: boolean) => void
   alAtenderTodo: () => void
 }) {
@@ -295,6 +334,7 @@ function GrupoComanda({
   const espera = minutosDesde(comanda.enviadoEn, ahora)
   const demorada = pendientes.length > 0 && espera >= alerta
   const agregado = comanda.ronda > 1
+  const columnas = local ? COLUMNAS_LOCAL : COLUMNAS
 
   return (
     <div className={`border-t-2 border-tinta-3/60 first-of-type:border-t-0 ${nueva ? 'animate-destello' : ''}`}>
@@ -302,6 +342,7 @@ function GrupoComanda({
       <div className="flex items-center gap-2 border-b border-reja bg-gris-50 px-3 py-2 text-[14px] lg:hidden">
         <span className="font-bold tabular-nums">N° {comanda.numero}</span>
         <span className="font-medium">{codigoMesa(comanda.mesa)}</span>
+        {local && <span className={`shrink-0 px-1.5 py-0.5 text-[12px] leading-tight font-bold text-white ${local.color}`}>{local.nombre}</span>}
         {comanda.cliente && <span className="truncate text-tinta-2">{comanda.cliente}</span>}
         {agregado && <Ad />}
         <span className={`ml-auto shrink-0 tabular-nums ${demorada ? 'font-medium text-rojo' : 'text-tinta-2'}`}>
@@ -322,11 +363,19 @@ function GrupoComanda({
         const adicionales = item.adicionales.map((a) => a.nombre).join(' + ')
         const detalle = textoDetalle(item.paraLlevar, item.detalle)
         return (
-          <div key={item.id} className={`border-b border-reja ${COLOR_FILA[item.estado]} ${COLUMNAS}`}>
+          <div key={item.id} className={`border-b border-reja ${COLOR_FILA[item.estado]} ${columnas}`}>
             {/* Pantalla grande: celdas de la planilla */}
             <span className="hidden min-h-11 items-center justify-center gap-0.5 border-r border-black/10 text-[15px] font-bold tabular-nums lg:flex">
               {primera && comanda.numero}
             </span>
+            {/* La celda del local se pinta en todas las filas de la comanda, como una celda combinada */}
+            {local && (
+              <span
+                className={`hidden min-h-11 items-center justify-center border-r border-black/10 px-1.5 text-center text-[13px] leading-tight font-bold text-white lg:flex ${local.color}`}
+              >
+                {primera && local.nombre}
+              </span>
+            )}
             <span className="hidden min-h-11 flex-col items-center justify-center border-r border-black/10 text-[14px] leading-tight font-medium lg:flex">
               {primera && (
                 <>

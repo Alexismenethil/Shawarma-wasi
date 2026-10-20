@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { mdiBellRing, mdiBroom, mdiCancel, mdiContentSave, mdiDotsVertical, mdiPlusBox, mdiPrinter, mdiSwapHorizontal } from '@mdi/js'
-import type { Estacion, MesaResumen, Pedido } from '@wasi/shared'
-import { nombreMesa } from '@wasi/shared'
+import { mdiBellRing, mdiBroom, mdiCancel, mdiCashRegister, mdiCheckCircle, mdiContentSave, mdiDotsVertical, mdiPlusBox, mdiPrinter, mdiReceiptText, mdiSwapHorizontal } from '@mdi/js'
+import type { EstadoCaja, Estacion, MesaResumen, Pedido } from '@wasi/shared'
+import { cocinaQuePrepara, esJefe, nombreMesa, puedeCobrar } from '@wasi/shared'
 import { api } from '../../lib/api'
 import { useRecurso } from '../../lib/recurso'
 import { useSesion } from '../../lib/sesion'
 import { useAjustes, nombreCocina } from '../../lib/ajustes'
 import { guardarClienteBorrador, indiceCarta, leerClienteBorrador, precioLinea, useBorrador, type LineaBorrador } from '../../lib/borrador'
-import { soles, useAhora } from '../../lib/formato'
+import { hora, soles, useAhora } from '../../lib/formato'
 import { sonarOk } from '../../lib/sonido'
+import { useImprimirAlCobrar } from '../../lib/impresion'
+import { huella } from '../../lib/azar'
 import { avisar } from '../../componentes/avisos'
 import { confirmar } from '../../componentes/dialogo'
 import { Boton } from '../../componentes/boton'
@@ -18,7 +20,7 @@ import { Membrete } from '../../componentes/marca'
 import { ESTADO_HOJA, ICONO_PAGADO, Icono } from '../../componentes/icono'
 import { estadoHoja, useLibro } from './libro'
 import { CabeceraNota, FilaBorrador, FilaGuardada, FilaNueva } from './filas'
-import { PieNota, aCentimos, cuadrarPago, filaPagoVacia, type FilaPago } from './pago'
+import { PieNota, Renglon, aCentimos, cuadrarPago, filaPagoVacia, type FilaPago } from './pago'
 import { DialogoLibre, DialogoMover } from './dialogos'
 import { Ticket } from './ticket'
 
@@ -48,11 +50,18 @@ function HojaNota({ id }: { id: number }) {
   const [guardando, setGuardando] = useState(false)
   const [libre, setLibre] = useState<{ abierto: boolean; linea?: LineaBorrador }>({ abierto: false })
   const [moviendo, setMoviendo] = useState(false)
+  const impresion = useImprimirAlCobrar(pedido?.cobradoEn)
 
   // Al llegar la nota del servidor, su cliente manda.
   useEffect(() => {
     if (pedido?.cliente) setCliente(pedido.cliente)
   }, [pedido?.id, pedido?.cliente])
+
+  // Solo cobra caja (y quien la supervisa), y solo con la caja abierta: así todo entra en el arqueo.
+  const rol = sesion?.usuario.rol
+  const cobra = !!rol && puedeCobrar(rol)
+  const caja = useRecurso<EstadoCaja>(cobra ? '/caja' : null, (c) => !!c.caja)
+  const cobraAqui = cobra && !!caja.datos?.abierta
 
   const pagado = !!pedido?.cobradoEn
   const items = pedido?.items ?? []
@@ -61,7 +70,7 @@ function HojaNota({ id }: { id: number }) {
   const porGuardar = borrador.lineas.reduce((s, l) => s + precioLinea(l, indice).subtotal, 0)
   const total = (pedido?.total ?? 0) + porGuardar
   const cuadre = cuadrarPago(total, pagos, ajustes.medios)
-  const hayAlgo = borrador.lineas.length > 0 || pagos.some((p) => p.metodo || p.monto)
+  const hayAlgo = borrador.lineas.length > 0 || (cobraAqui && pagos.some((p) => p.metodo || p.monto))
 
   if (mesas && !mesa) {
     return (
@@ -104,7 +113,7 @@ function HojaNota({ id }: { id: number }) {
    */
   const guardar = async () => {
     const lineas = borrador.lineas
-    const cobrar = cuadre.usadas.length > 0
+    const cobrar = cobraAqui && cuadre.usadas.length > 0
     if (!lineas.length && !cobrar) {
       avisar(pagado ? 'La nota ya está pagada.' : 'No hay nada nuevo que guardar.', 'info')
       return
@@ -137,25 +146,31 @@ function HojaNota({ id }: { id: number }) {
     try {
       let p = pedido
       if (lineas.length) {
-        p = await api<Pedido>(`/mesas/${id}/enviar`, {
-          cuerpo: { cliente: cliente.trim() || null, lineas: lineas.map(({ clave: _c, ...l }) => l) },
-        })
+        const cuerpo = { cliente: cliente.trim() || null, lineas: lineas.map(({ clave: _c, ...l }) => l) }
+        // La misma nota sin cambios lleva la misma clave: si se pulsa «Guardar» otra vez tras un corte, no se duplica.
+        p = await api<Pedido>(`/mesas/${id}/enviar`, { cuerpo, clave: `envio-${id}-${huella(JSON.stringify({ cuerpo, lineas: lineas.map((l) => l.clave) }))}` })
         borrador.vaciar()
         guardarClienteBorrador(id, '')
         nota.setDatos(p)
       }
       if (cobrar && p) {
-        p = await api<Pedido>(`/pedidos/${p.id}/cobrar`, {
-          cuerpo: { pagos: cuadre.usadas.map((f) => ({ metodo: f.metodo!, monto: aCentimos(f.monto) })) },
-        })
+        const pagosNota = cuadre.usadas.map((f) => ({ metodo: f.metodo!, monto: aCentimos(f.monto) }))
+        p = await api<Pedido>(`/pedidos/${p.id}/cobrar`, { cuerpo: { pagos: pagosNota }, clave: `cobro-${p.id}-${huella(JSON.stringify(pagosNota))}` })
         nota.setDatos(p)
         setPagos([filaPagoVacia()])
+        // Cobrado en el mostrador: el comprobante sale solo, como en caja.
+        impresion.alCobrar()
       }
       sonarOk()
       if (lineas.length && p) {
         const ronda = Math.max(...p.items.map((i) => i.ronda))
         const cocinas = [...new Set(p.items.filter((i) => i.ronda === ronda).map((i) => i.estacion))] as Estacion[]
-        avisar(`Guardado. Enviado a ${cocinas.map((e) => nombreCocina(ajustes, e).split(' · ')[0]).join(', ')}${cobrar ? ' y cobrado' : ''}`, 'ok')
+        // Con la cocina compartida, se dice en qué local se prepara: «Cocina 2 (Plaza More)».
+        const donde = (e: Estacion) => {
+          const otra = cocinaQuePrepara(ajustes.sucursales, p.sucursalId, e)
+          return otra === p.sucursalId ? '' : ` (${ajustes.sucursales.find((s) => s.id === otra)?.nombre ?? 'otra sucursal'})`
+        }
+        avisar(`Guardado. Enviado a ${cocinas.map((e) => nombreCocina(ajustes, e).split(' · ')[0] + donde(e)).join(', ')}${cobrar ? ' y cobrado' : ''}`, 'ok')
       } else {
         avisar('Cobro registrado', 'ok')
       }
@@ -194,6 +209,11 @@ function HojaNota({ id }: { id: number }) {
     }, 'Nota anulada')
   }
 
+  /** El mozo avisa a caja: la mesa quiere pagar. */
+  const pedirCuenta = () => {
+    if (pedido) void accion(() => api<Pedido>(`/pedidos/${pedido.id}/cuenta`, { cuerpo: {} }), 'Caja ya sabe que la mesa pide la cuenta')
+  }
+
   const mover = async (destino: MesaResumen) => {
     if (!pedido) return
     setMoviendo(false)
@@ -208,13 +228,54 @@ function HojaNota({ id }: { id: number }) {
 
   const masAcciones = [
     { etiqueta: 'Otros (producto libre)', icono: mdiPlusBox, alElegir: () => setLibre({ abierto: true }), deshabilitada: pagado },
+    ...(cobra ? [] : [{ etiqueta: 'Pedir la cuenta a caja', icono: mdiReceiptText, alElegir: pedirCuenta, deshabilitada: !pedido || pagado || !!pedido.cuentaPedidaEn || pedido.total <= 0 }]),
     { etiqueta: 'Imprimir nota', icono: mdiPrinter, alElegir: () => window.print(), deshabilitada: !pedido },
     { etiqueta: 'Mover a otra mesa', icono: mdiSwapHorizontal, alElegir: () => setMoviendo(true), deshabilitada: !pedido },
     { etiqueta: 'Anular toda la nota', icono: mdiCancel, peligro: true, alElegir: () => void anularNota(), deshabilitada: !pedido || pagado },
   ]
 
   const fecha = pedido ? fechaHora(new Date(pedido.creadoEn)) : borrador.lineas.length ? fechaHora(new Date(ahora)) : ''
-  const puedeAnular = (estadoItem: string) => estadoItem === 'PENDIENTE' || sesion?.usuario.rol === 'ADMIN'
+  const puedeAnular = (estadoItem: string) => estadoItem === 'PENDIENTE' || (!!rol && esJefe(rol))
+
+  // Donde va el tipo de pago: para el mozo, «Se cobra en caja» y su aviso; para caja cerrada, el atajo a abrirla.
+  const sinCobro = cobraAqui ? undefined : cobra ? (
+    <Renglon
+      className="bg-ambar/50"
+      etiqueta={
+        <>
+          <Icono d={mdiCashRegister} className="size-[18px] text-ambar-oscuro" />
+          <span className="flex-1 text-ambar-oscuro">{caja.datos ? 'La caja está cerrada: ábrela para cobrar.' : 'Revisando la caja…'}</span>
+          <Link to="/caja" className="flex h-8 shrink-0 items-center border border-ambar-oscuro/40 bg-hoja px-2.5 text-[13px] font-medium text-ambar-oscuro hover:bg-crema">
+            Ir a caja
+          </Link>
+        </>
+      }
+    />
+  ) : (
+    <Renglon
+      className={pedido?.cuentaPedidaEn ? 'bg-azul-suave' : ''}
+      etiqueta={
+        <>
+          <Icono d={pedido?.cuentaPedidaEn ? mdiCheckCircle : mdiCashRegister} className={`size-[18px] ${pedido?.cuentaPedidaEn ? 'text-azul' : 'text-tinta-3'}`} />
+          <span className="flex-1 text-tinta-2">
+            {pedido?.cuentaPedidaEn ? (
+              <>
+                Cuenta pedida a caja a las <b className="font-medium text-tinta">{hora(pedido.cuentaPedidaEn)}</b>
+              </>
+            ) : (
+              'Se cobra en caja'
+            )}
+          </span>
+          {pedido && pedido.total > 0 && !pedido.cuentaPedidaEn && (
+            <button onClick={pedirCuenta} className="flex h-8 shrink-0 items-center gap-1.5 border border-azul/50 bg-hoja px-2.5 text-[13px] font-medium text-azul hover:bg-azul-suave">
+              <Icono d={mdiReceiptText} className="size-4" />
+              Pedir la cuenta
+            </button>
+          )}
+        </>
+      }
+    />
+  )
 
   return (
     <>
@@ -302,7 +363,7 @@ function HojaNota({ id }: { id: number }) {
           ))}
           <FilaNueva carta={carta} deshabilitada={pagado} alElegir={(p) => borrador.agregar(p)} alLibre={() => setLibre({ abierto: true })} />
 
-          <PieNota total={total} filas={pagos} setFilas={setPagos} medios={ajustes.medios} pagos={pedido?.pagos ?? []} pagado={pagado} />
+          <PieNota total={total} filas={pagos} setFilas={setPagos} medios={ajustes.medios} pagos={pedido?.pagos ?? []} pagado={pagado} sinCobro={sinCobro} />
 
           {pagado && (
             <span className="sello pointer-events-none absolute right-6 bottom-24 px-3 py-1 text-[20px] text-verde-2 opacity-80 lg:right-[230px] lg:bottom-6">PAGADO</span>
