@@ -6,7 +6,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { isIP } from 'node:net'
 import { env } from '../env.js'
 import { z } from 'zod'
-import { ESTACIONES, ROLES } from '@wasi/shared'
+import { ESTACIONES, MAX_PAGOS_NOTA, ROLES } from '@wasi/shared'
 import { cambiarClave, exigir, ingresarConClave, ingresarConPin, sucursalDe } from '../servicios/auth.js'
 import * as pedidos from '../servicios/pedidos.js'
 import * as cocina from '../servicios/cocina.js'
@@ -152,7 +152,7 @@ escribir('post', '/items/:id/anular', enMozo, async (req, res) => {
 })
 
 // ─── Caja ────────────────────────────────────────────────────────────────
-const pagosNota = z.object({ pagos: z.array(z.object({ metodo: texto(40), monto: centimos })).min(1).max(6) })
+const pagosNota = z.object({ pagos: z.array(z.object({ metodo: texto(40), monto: centimos, recibido: centimos.optional() })).min(1).max(MAX_PAGOS_NOTA) })
 
 /** Cobrar es solo de caja: así todo el dinero entra en un arqueo. */
 escribir('post', '/pedidos/:id/cobrar', enCaja, async (req, res) => {

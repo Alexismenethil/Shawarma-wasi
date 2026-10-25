@@ -91,10 +91,11 @@ export async function ventaRapida(page: Page, mesa: { tipo: 'SALON' | 'LLEVAR'; 
 }
 
 /** Llama a la API con la sesión que la página guardó. */
-export async function apiDesde<T>(page: Page, ruta: string): Promise<T> {
-  return page.evaluate(async (r) => {
+export async function apiDesde<T>(page: Page, ruta: string, cuerpo?: unknown): Promise<T> {
+  return page.evaluate(async ({ r, cuerpo }) => {
     const { token } = JSON.parse(localStorage.getItem('wasi.sesion') ?? '{}')
-    const res = await fetch(`/api${r}`, { headers: { authorization: `Bearer ${token}`, 'x-sucursal': localStorage.getItem('wasi.vista') ?? '1' } })
+    const res = await fetch(`/api${r}`, { method: cuerpo === undefined ? 'GET' : 'POST', headers: { authorization: `Bearer ${token}`, 'x-sucursal': localStorage.getItem('wasi.vista') ?? '1', ...(cuerpo === undefined ? {} : { 'content-type': 'application/json' }) }, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) })
+    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`)
     return res.json()
-  }, ruta)
+  }, { r: ruta, cuerpo })
 }

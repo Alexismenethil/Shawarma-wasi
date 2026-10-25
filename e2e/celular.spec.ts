@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test'
 import { PIN, abrirCajaSiHaceFalta, entrar } from './ayuda'
+import { probarPagosCompartidos } from './pagos-compartidos-ayuda'
+
+test('en el celular se cobra una mesa compartida con vuelto por persona', async ({ page }) => {
+  await probarPagosCompartidos(page, 'celular')
+})
 
 test('en el celular los desplegables suben desde abajo y la nota se guarda', async ({ page }) => {
   await entrar(page, 'Mozo', PIN.MOZO)

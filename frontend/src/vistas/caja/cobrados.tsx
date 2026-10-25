@@ -12,7 +12,7 @@ import { Boton, Rueda } from '../../componentes/boton'
 import { Menu } from '../../componentes/desplegable'
 import { Dialogo } from '../../componentes/dialogo'
 import { Icono, iconoMedio } from '../../componentes/icono'
-import { PieNota, aCentimos, cuadrarPago, type FilaPago } from '../mozo/pago'
+import { PieNota, cuadrarPago, type FilaPago } from '../mozo/pago'
 import { Ticket } from '../mozo/ticket'
 import { Imprimible } from './cobrar'
 
@@ -81,7 +81,7 @@ export function Cobrados({ caja }: { caja: ArqueoCaja }) {
                 <span className="hidden h-11 items-center justify-center border-r border-reja text-tinta-2 tabular-nums sm:flex">{c.numero}</span>
                 <span className="hidden h-11 items-center justify-center border-r border-reja font-bold sm:flex">{codigoMesa(c.mesa)}</span>
                 <span className="hidden h-11 items-center truncate border-r border-reja px-2 sm:flex">{c.cliente ?? <span className="text-tinta-4">—</span>}</span>
-                <span className="hidden h-11 min-w-0 items-center gap-1.5 border-r border-reja px-2 sm:flex">
+                <span className="barra-fina hidden h-11 min-w-0 items-center gap-1.5 overflow-x-auto border-r border-reja px-2 sm:flex">
                   {c.pagos.map((g) => (
                     <span key={g.id} className="flex shrink-0 items-center gap-1 bg-gris-100 px-1.5 py-0.5 text-[12.5px]">
                       <Icono d={iconoMedio({ clave: g.metodo, nombre: nombre(g.metodo) })} className="size-3.5 text-tinta-3" />
@@ -132,16 +132,16 @@ function CorregirPago({ cobro, alCerrar, alListo }: { cobro: CobroCaja | null; a
   const [antes, setAntes] = useState<CobroCaja | null>(null)
   if (cobro !== antes) {
     setAntes(cobro)
-    if (cobro) setFilas(cobro.pagos.map((g) => ({ clave: idAlAzar(), metodo: g.metodo, monto: ((g.recibido ?? g.monto) / 100).toFixed(2) })))
+    if (cobro) setFilas(cobro.pagos.map((g) => ({ clave: idAlAzar(), metodo: g.metodo, monto: (g.monto / 100).toFixed(2), recibido: g.recibido === null ? '' : (g.recibido / 100).toFixed(2) })))
   }
   const cuadre = cuadrarPago(cobro?.total ?? 0, filas, ajustes.medios)
-  const valido = cuadre.usadas.length > 0 && !cuadre.excedeElectronico && cuadre.debe === 0
+  const valido = cuadre.usadas.length > 0 && !cuadre.error && cuadre.debe === 0
 
   const guardar = async () => {
     if (!cobro || !valido) return
     setGuardando(true)
     try {
-      await api(`/pedidos/${cobro.pedidoId}/corregir-pago`, { cuerpo: { pagos: cuadre.usadas.map((f) => ({ metodo: f.metodo!, monto: aCentimos(f.monto) })) } })
+      await api(`/pedidos/${cobro.pedidoId}/corregir-pago`, { cuerpo: { pagos: cuadre.pagos } })
       avisar('Tipo de pago corregido', 'ok')
       alListo()
     } catch (e) {

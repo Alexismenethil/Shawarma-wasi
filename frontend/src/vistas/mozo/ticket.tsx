@@ -48,17 +48,17 @@ export function Ticket({ pedido, mesa }: { pedido: Pedido; mesa: { numero: numbe
         <span>TOTAL S/</span>
         <span>{soles(pedido.total)}</span>
       </p>
-      {pedido.pagos.map((g) => (
+      {pedido.pagos.map((g, i) => (
         <div key={g.id}>
           <p className="flex justify-between">
-            <span>{nombre(g.metodo)}</span>
-            <span>{soles(g.recibido ?? g.monto)}</span>
+            <span>Pago {i + 1} · {nombre(g.metodo)}</span>
+            <span>{soles(g.monto)}</span>
           </p>
-          {g.recibido !== null && g.recibido > g.monto && (
-            <p className="flex justify-between">
-              <span>Vuelto</span>
-              <span>{soles(g.recibido - g.monto)}</span>
-            </p>
+          {g.recibido !== null && (
+            <>
+              <p className="flex justify-between"><span>Recibido</span><span>{soles(g.recibido)}</span></p>
+              <p className="flex justify-between"><span>Vuelto</span><span>{soles(Math.max(0, g.recibido - g.monto))}</span></p>
+            </>
           )}
         </div>
       ))}

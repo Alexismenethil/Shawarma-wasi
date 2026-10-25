@@ -226,6 +226,16 @@ export interface Pago {
   recibido: number | null
 }
 
+/** Cada aporte se conserva por separado, incluso si se repite el medio. */
+export const MAX_PAGOS_NOTA = 30
+export interface PagoCobro {
+  metodo: string
+  /** Parte del total que paga esta persona, en céntimos. */
+  monto: number
+  /** Dinero entregado. En pagos electrónicos debe coincidir con monto. */
+  recibido: number
+}
+
 export interface Pedido {
   id: number
   sucursalId: number

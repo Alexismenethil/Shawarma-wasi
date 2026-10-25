@@ -20,7 +20,7 @@ import { Membrete } from '../../componentes/marca'
 import { ESTADO_HOJA, ICONO_PAGADO, Icono } from '../../componentes/icono'
 import { estadoHoja, useLibro } from './libro'
 import { CabeceraNota, FilaBorrador, FilaGuardada, FilaNueva } from './filas'
-import { PieNota, Renglon, aCentimos, cuadrarPago, filaPagoVacia, type FilaPago } from './pago'
+import { PieNota, ResumenPagos, Renglon, cuadrarPago, filaPagoVacia, type FilaPago } from './pago'
 import { DialogoLibre, DialogoMover } from './dialogos'
 import { Ticket } from './ticket'
 
@@ -119,9 +119,8 @@ function HojaNota({ id }: { id: number }) {
       return
     }
     if (cobrar) {
-      if (cuadre.excedeElectronico) return avisar('El pago electrónico supera el total.', 'error')
+      if (cuadre.error) return avisar(cuadre.error, 'error')
       if (cuadre.debe > 0) return avisar(`El pago no cubre el total: debe S/ ${soles(cuadre.debe)}.`, 'error')
-      const nombre = (clave: string | null) => ajustes.medios.find((m) => m.clave === clave)?.nombre ?? clave
       const ok = await confirmar({
         titulo: 'Guardar y cobrar',
         aceptar: 'Guardar y cobrar',
@@ -129,13 +128,9 @@ function HojaNota({ id }: { id: number }) {
           <div className="space-y-2">
             {lineas.length > 0 && <p>Se enviarán {lineas.reduce((s, l) => s + l.cantidad, 0)} platos a cocina.</p>}
             <p>
-              Cobro de <b>S/ {soles(total)}</b>: {cuadre.usadas.map((f) => `${nombre(f.metodo)} S/ ${soles(aCentimos(f.monto))}`).join(' + ')}.
+              Cobro de <b>S/ {soles(total)}</b>.
             </p>
-            {cuadre.vuelto > 0 && (
-              <p className="font-medium text-verde-2">
-                Vuelto: S/ {soles(cuadre.vuelto)}
-              </p>
-            )}
+            <ResumenPagos c={cuadre} medios={ajustes.medios} />
           </div>
         ),
       })
@@ -154,7 +149,7 @@ function HojaNota({ id }: { id: number }) {
         nota.setDatos(p)
       }
       if (cobrar && p) {
-        const pagosNota = cuadre.usadas.map((f) => ({ metodo: f.metodo!, monto: aCentimos(f.monto) }))
+        const pagosNota = cuadre.pagos
         p = await api<Pedido>(`/pedidos/${p.id}/cobrar`, { cuerpo: { pagos: pagosNota }, clave: `cobro-${p.id}-${huella(JSON.stringify(pagosNota))}` })
         nota.setDatos(p)
         setPagos([filaPagoVacia()])

@@ -15,7 +15,7 @@ import { avisar } from '../../componentes/avisos'
 import { Boton, Rueda } from '../../componentes/boton'
 import { confirmar } from '../../componentes/dialogo'
 import { ESTADO_HOJA, Icono } from '../../componentes/icono'
-import { PieNota, aCentimos, cuadrarPago, filaPagoVacia, type FilaPago } from '../mozo/pago'
+import { PieNota, ResumenPagos, cuadrarPago, filaPagoVacia, type FilaPago } from '../mozo/pago'
 import { textoDetalle } from '../mozo/filas'
 import { Ticket } from '../mozo/ticket'
 
@@ -196,11 +196,10 @@ function CobroNota({ pedidoId, alVolver, siguiente, alSiguiente }: { pedidoId: n
   const pagado = !!pedido.cobradoEn
   const vivos = pedido.items.filter((i) => i.estado !== 'ANULADO')
   const cuadre = cuadrarPago(pedido.total, filas, ajustes.medios)
-  const nombreMedio = (clave: string | null) => ajustes.medios.find((m) => m.clave === clave)?.nombre ?? clave
 
   const cobrar = async () => {
     if (!cuadre.usadas.length) return avisar('Elige el tipo de pago y el monto.', 'error')
-    if (cuadre.excedeElectronico) return avisar('El pago electrónico supera el total.', 'error')
+    if (cuadre.error) return avisar(cuadre.error, 'error')
     if (cuadre.debe > 0) return avisar(`Falta cubrir S/ ${soles(cuadre.debe)}.`, 'error')
     const ok = await confirmar({
       titulo: `Cobrar ${nombreMesa(pedido.mesa)}`,
@@ -209,17 +208,16 @@ function CobroNota({ pedidoId, alVolver, siguiente, alSiguiente }: { pedidoId: n
       mensaje: (
         <div className="space-y-2">
           <p>
-            Nota N° {pedido.numero} por <b className="font-medium">S/ {soles(pedido.total)}</b>:{' '}
-            {cuadre.usadas.map((f) => `${nombreMedio(f.metodo)} S/ ${soles(aCentimos(f.monto))}`).join(' + ')}.
+            Nota N° {pedido.numero} por <b className="font-medium">S/ {soles(pedido.total)}</b>.
           </p>
-          {cuadre.vuelto > 0 && <p className="border border-verde-1/40 bg-menta-suave px-3 py-2 text-[17px] font-bold text-verde-3">Vuelto: S/ {soles(cuadre.vuelto)}</p>}
+          <ResumenPagos c={cuadre} medios={ajustes.medios} />
         </div>
       ),
     })
     if (!ok) return
     setCobrando(true)
     try {
-      const pagos = cuadre.usadas.map((f) => ({ metodo: f.metodo!, monto: aCentimos(f.monto) }))
+      const pagos = cuadre.pagos
       // El mismo cobro lleva la misma clave: si se pulsa otra vez tras un corte, no se cobra dos veces.
       const p = await api<Pedido>(`/pedidos/${pedido.id}/cobrar`, { cuerpo: { pagos }, clave: `cobro-${pedido.id}-${huella(JSON.stringify(pagos))}` })
       setDatos(p)

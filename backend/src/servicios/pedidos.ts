@@ -368,13 +368,14 @@ export async function pedirCuenta(sucursalId: number, pedidoId: number) {
   return obtenerPedido(sucursalId, pedidoId)
 }
 
-type PagoPedido = { metodo: string; monto: number }
+type PagoPedido = { metodo: string; monto: number; recibido?: number }
 
 /**
- * Reparte lo pagado como la nota del Excel («Vuelto» / «Debe»): los pagos
- * electrónicos van por su monto exacto; el efectivo cubre lo que falte y lo
- * que sobra es vuelto. Se puede repartir la cuenta entre varios medios (parte
- * Yape, parte efectivo). Los medios salen de Administración.
+ * Con recibido explícito, cada fila indica cuánto se cobra y cuánto entrega
+ * esa persona. El vuelto es suyo y nunca cubre el aporte de otra persona.
+ * Se guardan todas las filas en su orden, aunque repitan el medio de pago.
+ * Sin recibido en ninguna fila se conserva el contrato de las pestañas de
+ * la versión anterior, para que puedan terminar sus cobros al desplegar.
  */
 async function repartirPagos(total: number, pagos: PagoPedido[], tx: Prisma.TransactionClient) {
   const medios = await tx.medioPago.findMany({ where: { clave: { in: pagos.map((p) => p.metodo) }, activo: true } })
@@ -382,6 +383,22 @@ async function repartirPagos(total: number, pagos: PagoPedido[], tx: Prisma.Tran
     const m = medios.find((x) => x.clave === clave)
     if (!m) throw new ErrorNegocio('Ese medio de pago ya no está disponible.')
     return m
+  }
+
+  if (pagos.some((p) => p.recibido !== undefined)) {
+    if (pagos.some((p) => p.recibido === undefined)) throw new ErrorNegocio('Completa el importe y el dinero recibido de cada pago.')
+    const filas = pagos.map((p, i) => {
+      const m = medio(p.metodo)
+      const recibido = p.recibido!
+      if (p.monto <= 0) throw new ErrorNegocio(`Pago ${i + 1}: el importe a cobrar debe ser mayor que cero.`)
+      if (m.efectivo && recibido < p.monto) throw new ErrorNegocio(`Pago ${i + 1}: recibió ${formatoSoles(recibido)}, pero debe cobrar ${formatoSoles(p.monto)}.`)
+      if (!m.efectivo && recibido !== p.monto) throw new ErrorNegocio(`Pago ${i + 1}: ${m.nombre} debe pagarse por el importe exacto, sin vuelto.`)
+      return { metodo: p.metodo, monto: p.monto, recibido: m.efectivo ? recibido : null }
+    })
+    const aplicado = filas.reduce((s, p) => s + p.monto, 0)
+    if (aplicado > total) throw new ErrorNegocio(`Los importes a cobrar superan el total por ${formatoSoles(aplicado - total)}.`)
+    if (aplicado < total) throw new ErrorNegocio(`Debe ${formatoSoles(total - aplicado)}. Reparte el saldo entre los demás pagos.`)
+    return filas
   }
 
   let falta = total

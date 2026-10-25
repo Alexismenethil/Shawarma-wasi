@@ -77,11 +77,21 @@ también anota (los pedidos para llevar del mostrador).
 1. **Apertura**: al entrar, caja abre su turno con el fondo de sencillo (se puede contar
    billete por billete). El último cierre sugiere lo que dejó para este turno.
 2. **Por cobrar**: las notas abiertas de la sucursal; se elige una y se cobra con el pie
-   de la nota del Excel (repartido entre medios, con su vuelto). **Al cobrar, el
+   de la nota del Excel (repartido entre personas o medios, con su vuelto). Cada pago
+   tiene **A cobrar** (la parte de la cuenta), **Recibido** (lo que entrega en efectivo)
+   y su **Vuelto** independiente. «Otro pago» permite repetir efectivo, Yape u otro
+   medio, hasta 30 aportes. Si entrega el efectivo exacto, se deja «Recibido» vacío;
+   los pagos electrónicos van por su importe exacto. El cobro se confirma cuando las
+   partes suman el total de la mesa. **Al cobrar, el
    comprobante sale solo** (con el pago, el vuelto y «PAGADO»); antes, se puede imprimir
    la cuenta. Lo mismo al cobrar en la nota del mostrador.
 3. **Cobrados**: lo cobrado en el turno; se reimprime o se corrige el tipo de pago
    (se marcó Yape y era efectivo) mientras la caja siga abierta.
+
+   Ejemplo: para una mesa de S/50, pago 1: cobrar S/15, recibir S/200, devolver S/185;
+   pago 2: cobrar S/26, recibir S/30, devolver S/4; pago 3: Yape S/9. Se guardan las
+   tres filas y se imprimen sus importes y vueltos. El arqueo suma S/41 de efectivo
+   y S/9 de Yape. La corrección conserva ese desglose por persona.
 4. **Ingresos y egresos**: lo que entra o sale del cajón sin ser venta (gas, proveedor,
    sencillo). No sale más efectivo del que hay.
 5. **Arqueo y cierre**: *debe haber* = fondo + cobros en efectivo (sin el vuelto) +
