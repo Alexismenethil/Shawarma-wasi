@@ -26,6 +26,9 @@ export async function probarPagosCompartidos(page: Page, nombre: string) {
   const pago1 = page.getByRole('group', { name: 'Pago 1', exact: true })
   await pago1.getByRole('button', { name: 'Tipo de pago' }).click()
   await page.getByRole('option', { name: 'Efectivo', exact: true }).click()
+  // Con un solo pago se cobra el total: «A cobrar» aparece al dividir la cuenta.
+  await expect(pago1.getByLabel('Monto a cobrar')).toBeHidden()
+  await page.getByRole('button', { name: 'Otro pago', exact: true }).click()
   await pago1.getByLabel('Monto a cobrar').fill('15')
   await pago1.getByLabel('Monto recibido').fill('200')
   await expect(pago1.getByText('Vuelto de este pago: S/ 185.00')).toBeVisible()
@@ -33,7 +36,6 @@ export async function probarPagosCompartidos(page: Page, nombre: string) {
   await expect(page.getByText('Falta cubrir S/ 35.00.', { exact: true })).toBeVisible()
   await expect(page.getByRole('dialog', { name: /^Cobrar / })).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Otro pago', exact: true }).click()
   const pago2 = page.getByRole('group', { name: 'Pago 2', exact: true })
   await pago2.getByRole('button', { name: 'Tipo de pago' }).click()
   await page.getByRole('option', { name: 'Efectivo', exact: true }).click()

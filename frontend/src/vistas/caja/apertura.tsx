@@ -166,14 +166,14 @@ export function Apertura({ estado, alCambiar }: { estado: EstadoCaja; alCambiar:
               )}
             </div>
             <div className="flex flex-wrap gap-2 border-t border-reja bg-gris-50 px-4 py-3">
-              <Boton onClick={() => setVerArqueo(!verArqueo)} className="h-10">
+              <Boton onClick={() => setVerArqueo(!verArqueo)} className="h-12 text-[15px] sm:h-10 sm:text-[14px]">
                 {verArqueo ? 'Ocultar arqueo' : 'Ver arqueo'}
               </Boton>
-              <Boton icono={mdiPrinter} onClick={() => window.print()} className="h-10">
+              <Boton icono={mdiPrinter} onClick={() => window.print()} className="h-12 text-[15px] sm:h-10 sm:text-[14px]">
                 Imprimir cierre
               </Boton>
               {estado.puedeReabrir && (
-                <Boton variante="oscuro" icono={mdiLockOpenVariant} onClick={() => void reabrir()} className="h-10">
+                <Boton variante="oscuro" icono={mdiLockOpenVariant} onClick={() => void reabrir()} className="h-12 text-[15px] sm:h-10 sm:text-[14px]">
                   Reabrir caja
                 </Boton>
               )}

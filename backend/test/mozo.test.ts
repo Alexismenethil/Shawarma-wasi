@@ -109,6 +109,23 @@ describe('nota de pedido', () => {
     assert.equal(r.datos.cliente, 'Rosa M.')
   })
 
+  it('el cliente cambia de idea: toda la nota o una línea pasa a para llevar, y vuelve a la mesa', async () => {
+    const id = (await mozo.get<Pedido>(`/mesas/${await mesa(mozo, 'M1')}/pedido`)).datos.id
+    const todo = await mozo.post<Pedido>(`/pedidos/${id}/para-llevar`, { paraLlevar: true })
+    assert.equal(todo.estado, 200, todo.texto)
+    assert.ok(todo.datos.items.filter((i) => i.estado !== 'ANULADO').every((i) => i.paraLlevar))
+    // Cocina lo ve en su hoja.
+    const hoja = (await cocina.get<{ pedidoId: number; items: { paraLlevar: boolean }[] }[]>('/cocina')).datos
+    assert.ok(hoja.filter((x) => x.pedidoId === id).every((x) => x.items.every((i) => i.paraLlevar)))
+    const [primera] = todo.datos.items
+    const una = await mozo.post<Pedido>(`/pedidos/${id}/para-llevar`, { paraLlevar: false, itemIds: [primera.id] })
+    assert.equal(una.datos.items.find((i) => i.id === primera.id)?.paraLlevar, false)
+    assert.ok(una.datos.items.filter((i) => i.id !== primera.id).every((i) => i.paraLlevar))
+    // Se deja como estaba: en mesa, salvo el emoliente.
+    await mozo.post(`/pedidos/${id}/para-llevar`, { paraLlevar: false })
+    await mozo.post(`/pedidos/${id}/para-llevar`, { paraLlevar: true, itemIds: [todo.datos.items[1].id] })
+  })
+
   it('cocina atiende y la mesa pasa a «Atendido»; el mozo sirve y queda «Por cobrar»', async () => {
     const p = (await mozo.get<Pedido>(`/mesas/${await mesa(mozo, 'M1')}/pedido`)).datos
     await atenderTodo(p)

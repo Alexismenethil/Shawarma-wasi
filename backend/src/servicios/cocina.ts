@@ -58,7 +58,7 @@ function agrupar(filas: Fila[], numeros: Map<number, number>): ComandaCocina[] {
 /** Lo resuelto se muestra a lo más 12 horas, aunque nadie pulse «Limpiar». */
 const MEMORIA = 12 * 3600_000
 
-export async function hojaCocina(sucursalId: number, estacion?: Estacion, limpiadoEn?: string): Promise<ComandaCocina[]> {
+export async function hojaCocina(sucursalId: number, estaciones?: readonly Estacion[], limpiadoEn?: string): Promise<ComandaCocina[]> {
   const limite = Date.now() - MEMORIA
   const desde = new Date(Math.max(limite, limpiadoEn ? Date.parse(limpiadoEn) || 0 : 0))
 
@@ -66,7 +66,7 @@ export async function hojaCocina(sucursalId: number, estacion?: Estacion, limpia
     where: {
       AND: [
         // Cada estación con las sucursales que se ven en ella (la propia, o las que comparten esa cocina).
-        { OR: await filtroDeCocina(sucursalId, estacion) },
+        { OR: await filtroDeCocina(sucursalId, estaciones) },
         { OR: [{ estado: 'PENDIENTE', pedido: { estado: 'ABIERTO' } }, { listoEn: { gte: desde } }, { anuladoEn: { gte: desde } }] },
       ],
     },

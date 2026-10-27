@@ -7,8 +7,8 @@ import { recordar } from '../memoria.js'
  * Cocina compartida (temporal).
  *
  * Plaza More y Plaza San Cristóbal están en la misma ciudad y, por ahora, la
- * carta y los shawarmas de las dos salen de la cocina de Plaza More; los
- * emolientes, cada local en la suya. Cada sucursal guarda a qué cocina manda
+ * carta, los shawarmas y las bebidas de las dos salen de la cocina de Plaza
+ * More; los emolientes, cada local en la suya. Cada sucursal guarda a qué cocina manda
  * qué estaciones (Administración → Sucursales → «Cocina»); poner «Propia» lo
  * deshace sin tocar el código.
  *
@@ -46,10 +46,10 @@ export async function juntas(sucursalId: number, estacion: Estacion) {
   return juntasEnCocina(await leerCocinas(), sucursalId, estacion)
 }
 
-/** Lo que filtra la hoja de cocina: por cada estación, las sucursales que se ven en ella. */
-export async function filtroDeCocina(sucursalId: number, estacion?: Estacion) {
+/** Lo que filtra la hoja de cocina: por cada estación (todas, si no se dice), las sucursales que se ven en ella. */
+export async function filtroDeCocina(sucursalId: number, estaciones?: readonly Estacion[]) {
   const cocinas = await leerCocinas()
-  return (estacion ? [estacion] : ESTACIONES).map((e) => ({ estacion: e, pedido: { sucursalId: { in: juntasEnCocina(cocinas, sucursalId, e) } } }))
+  return (estaciones?.length ? estaciones : ESTACIONES).map((e) => ({ estacion: e, pedido: { sucursalId: { in: juntasEnCocina(cocinas, sucursalId, e) } } }))
 }
 
 /**

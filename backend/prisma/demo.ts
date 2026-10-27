@@ -50,7 +50,7 @@ function lineaAlAzar() {
   const familia = elegir(familiasPeso)
   const lista = porFamilia.get(familia)!
   const p = lista[Math.min(lista.length - 1, Math.floor(Math.pow(azar(), 1.8) * lista.length))]
-  const adic = p.familia.estacion !== 'BEBIDAS' && azar() < 0.12 ? [adicionales[entre(0, 8)]] : []
+  const adic = !['BEBIDAS', 'EMOLIENTES'].includes(p.familia.estacion) && azar() < 0.12 ? [adicionales[entre(0, 8)]] : []
   const precioAdicionales = adic.reduce((s, a) => s + a.precio, 0)
   const cantidad = azar() < 0.78 ? 1 : entre(2, 3)
   return {

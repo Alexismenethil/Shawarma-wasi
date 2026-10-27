@@ -166,7 +166,7 @@ describe('administración: todo se edita', () => {
       assert.deepEqual(publicos.observaciones, ['Sin ají', 'Extra cremas'])
       assert.equal(publicos.minutosAlerta, 20)
       assert.equal((await admin.patch('/admin/ajustes', { nombre: '' })).estado, 400)
-      ok(await admin.patch('/admin/ajustes', { subtitulo: 'Peruvian Cuisine', estaciones: { BEBIDAS: 'Emolientes y bebidas' }, minutosAlerta: 15 }))
+      ok(await admin.patch('/admin/ajustes', { subtitulo: 'Peruvian Cuisine', estaciones: { BEBIDAS: 'Bebidas' }, minutosAlerta: 15 }))
     })
   })
 

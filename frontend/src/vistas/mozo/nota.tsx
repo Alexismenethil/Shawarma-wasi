@@ -1,6 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { mdiBellRing, mdiBroom, mdiCancel, mdiCashRegister, mdiCheckCircle, mdiContentSave, mdiDotsVertical, mdiPlusBox, mdiPrinter, mdiReceiptText, mdiSwapHorizontal } from '@mdi/js'
+import {
+  mdiBellRing,
+  mdiBroom,
+  mdiCancel,
+  mdiCashRegister,
+  mdiCheckCircle,
+  mdiContentSave,
+  mdiDotsVertical,
+  mdiPlusBox,
+  mdiPrinter,
+  mdiReceiptText,
+  mdiShopping,
+  mdiSwapHorizontal,
+  mdiTableFurniture,
+} from '@mdi/js'
 import type { EstadoCaja, Estacion, MesaResumen, Pedido } from '@wasi/shared'
 import { cocinaQuePrepara, esJefe, nombreMesa, puedeCobrar } from '@wasi/shared'
 import { api } from '../../lib/api'
@@ -221,8 +235,19 @@ function HojaNota({ id }: { id: number }) {
     }
   }
 
+  // Para llevar o para mesa: lo ya enviado (cocina lo ve al instante) y lo que falta guardar.
+  const lineasLlevar = [...vivos.map((i) => i.paraLlevar), ...borrador.lineas.map((l) => l.paraLlevar)]
+  const cambiarLlevar = (paraLlevar: boolean) => {
+    for (const l of borrador.lineas) borrador.cambiar(l.clave, { paraLlevar })
+    const texto = paraLlevar ? 'Toda la nota va para llevar' : 'Toda la nota es para comer en mesa'
+    if (pedido && vivos.length) void accion(() => api<Pedido>(`/pedidos/${pedido.id}/para-llevar`, { cuerpo: { paraLlevar } }), texto)
+    else avisar(texto, 'ok')
+  }
+
   const masAcciones = [
     { etiqueta: 'Otros (producto libre)', icono: mdiPlusBox, alElegir: () => setLibre({ abierto: true }), deshabilitada: pagado },
+    ...(lineasLlevar.some((v) => !v) ? [{ etiqueta: 'Cambiar a para llevar', icono: mdiShopping, alElegir: () => cambiarLlevar(true), deshabilitada: pagado }] : []),
+    ...(lineasLlevar.some((v) => v) ? [{ etiqueta: 'Cambiar a mesa', icono: mdiTableFurniture, alElegir: () => cambiarLlevar(false), deshabilitada: pagado }] : []),
     ...(cobra ? [] : [{ etiqueta: 'Pedir la cuenta a caja', icono: mdiReceiptText, alElegir: pedirCuenta, deshabilitada: !pedido || pagado || !!pedido.cuentaPedidaEn || pedido.total <= 0 }]),
     { etiqueta: 'Imprimir nota', icono: mdiPrinter, alElegir: () => window.print(), deshabilitada: !pedido },
     { etiqueta: 'Mover a otra mesa', icono: mdiSwapHorizontal, alElegir: () => setMoviendo(true), deshabilitada: !pedido },
@@ -342,6 +367,15 @@ function HojaNota({ id }: { id: number }) {
               puedeAnular={!pagado && puedeAnular(i.estado)}
               alServir={() => void accion(() => api<Pedido>(`/pedidos/${pedido!.id}/servir`, { cuerpo: { itemIds: [i.id] } }), 'Servido')}
               alAnular={() => void anularFila(i.id)}
+              alCambiarLlevar={
+                pagado || i.estado === 'ANULADO'
+                  ? undefined
+                  : () =>
+                      void accion(
+                        () => api<Pedido>(`/pedidos/${pedido!.id}/para-llevar`, { cuerpo: { paraLlevar: !i.paraLlevar, itemIds: [i.id] } }),
+                        i.paraLlevar ? `${i.nombre}: para mesa` : `${i.nombre}: para llevar`,
+                      )
+              }
             />
           ))}
           {borrador.lineas.map((l) => (

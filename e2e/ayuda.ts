@@ -51,11 +51,13 @@ export async function verSucursal(page: Page, nombre: string) {
 /** En la pantalla de caja: si está cerrada, la abre con S/ 100 de fondo. */
 export async function abrirCajaSiHaceFalta(page: Page) {
   const abrir = page.getByRole('button', { name: /^Abrir caja con/ })
-  await expect(abrir.or(page.getByText('Caja abierta', { exact: false }).first())).toBeVisible()
+  // Con la caja abierta aparecen sus hojas al pie (Por cobrar, Cobrados…).
+  const abierta = page.getByRole('navigation', { name: 'Hojas' })
+  await expect(abrir.or(abierta)).toBeVisible()
   if (await abrir.isVisible()) {
     await page.getByLabel('Fondo inicial').fill('100')
     await abrir.click()
-    await expect(page.getByText(/^Caja abierta/).first()).toBeVisible()
+    await expect(abierta).toBeVisible()
   }
 }
 

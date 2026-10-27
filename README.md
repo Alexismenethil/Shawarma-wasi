@@ -148,15 +148,17 @@ por salas: lo que pasa en una no despierta a las tablets de la otra.
 
 ### Cocina compartida (temporal)
 
-Plaza More y Plaza San Cristóbal están en la misma ciudad y, por ahora, **la carta y los
-shawarmas de las dos salen de la cocina de Plaza More**; los **emolientes y bebidas**,
-cada local en la suya. Así queda desde el primer deploy:
+Plaza More y Plaza San Cristóbal están en la misma ciudad y, por ahora, **la carta, los
+shawarmas y las bebidas de las dos salen de la cocina de Plaza More**; solo los
+**emolientes** se preparan en cada local (pedido del encargado, 27 de octubre de 2026).
+Los emolientes siguen en la **Cocina 3** y las bebidas tienen la suya, la **Cocina 4**. Así
+queda desde el deploy:
 
-- La pantalla de cocina de Plaza More (Cocina 1 y Cocina 2) muestra las comandas de los
+- La pantalla de cocina de Plaza More (Cocina 1, 2 y 4) muestra las comandas de los
   dos locales en una sola hoja, con la columna **«Local»** pintada del color de cada uno,
   para que el cocinero y el mozo sepan a dónde va cada plato. La misma M5 puede estar en
   los dos locales: la etiqueta las separa. Su Cocina 3 muestra solo sus emolientes.
-- La tablet de San Cristóbal (Cocina 3) ve solo sus emolientes.
+- La tablet de San Cristóbal sigue en su Cocina 3: ve solo sus emolientes.
 - El mozo de San Cristóbal ve al guardar «Enviado a Cocina 2 (Plaza More)» y, cuando sale
   su plato, «M5: cocina atendió el pedido · recógelo en Plaza More». Los avisos de un local
   no les llegan a los mozos del otro.

@@ -77,7 +77,7 @@ describe('reportes', () => {
     assert.equal(d.anterior.hasta, sumarDias(h, -7))
     assert.equal(d.anterior.desde, sumarDias(h, -13))
     assert.ok(d.masVendidos.some((p: any) => p.nombre === 'Shawarma Huamanguina'))
-    assert.equal(d.estaciones.length, 3)
+    assert.equal(d.estaciones.length, 4)
   })
 
   it('fechas inválidas o rangos imposibles responden 400', async () => {

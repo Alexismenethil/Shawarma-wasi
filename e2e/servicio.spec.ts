@@ -66,7 +66,7 @@ test('servicio completo: el mozo anota y pide la cuenta, cocina atiende y caja c
   await caja.getByRole('button', { name: 'Tipo de pago' }).click()
   await caja.getByRole('option', { name: 'Efectivo' }).click()
   await caja.getByLabel('Monto recibido').fill('50')
-  await expect(caja.getByText('Vuelto total', { exact: true })).toBeVisible()
+  await expect(caja.getByText('Vuelto: S/ 32.00', { exact: true })).toBeVisible()
   await caja.getByRole('button', { name: 'Cobrar S/ 18.00' }).click()
   const dialogo = caja.getByRole('dialog', { name: 'Cobrar Mesa 8' })
   await expect(dialogo.getByText(/Vuelto: S\/ 32\.00/)).toBeVisible()

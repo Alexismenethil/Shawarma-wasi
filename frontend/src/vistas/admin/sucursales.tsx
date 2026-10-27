@@ -322,7 +322,7 @@ function DialogoCocina({
   const atiende = sucursal.cocinaPara.map((id) => todas.find((o) => o.id === id)?.nombre ?? `Sucursal ${id}`)
   const [comparte, setComparte] = useState(!!sucursal.cocinaCompartida)
   const [en, setEn] = useState<number | null>(sucursal.cocinaCompartida?.en ?? (posibles.length === 1 ? posibles[0].id : null))
-  const [cuales, setCuales] = useState<Estacion[]>(sucursal.cocinaCompartida?.estaciones ?? ['CARTA', 'SHAWARMAS'])
+  const [cuales, setCuales] = useState<Estacion[]>(sucursal.cocinaCompartida?.estaciones ?? ['CARTA', 'SHAWARMAS', 'BEBIDAS'])
   const [guardando, setGuardando] = useState(false)
   const anfitriona = posibles.find((o) => o.id === en)
   const sinOpcion = atiende.length > 0 || posibles.length === 0

@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { mdiCheck, mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiMagnify, mdiMenuDown } from '@mdi/js'
+import { mdiCheck, mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiCloseCircle, mdiMagnify, mdiMenuDown } from '@mdi/js'
 import { Flotante, esCelular } from './flotante'
 import { Icono } from './icono'
 
@@ -18,7 +18,7 @@ export interface Opcion<T> {
   /** Más texto donde buscar: el código, la familia. */
   buscar?: string
   deshabilitada?: boolean
-  /** Título de grupo que se pinta antes de esta opción. */
+  /** Título de grupo: se pinta antes de la primera opción de cada grupo que quede a la vista. */
   grupo?: string
 }
 
@@ -28,10 +28,20 @@ const normal = (s: string) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
 
+/**
+ * Cada palabra escrita tiene que estar, en cualquier orden: «hawa shaw»
+ * encuentra la Shawarma Hawaiana. Primero se busca al inicio de las palabras
+ * («hawa» no trae todas las sHAWArmas); si así no sale nada, en cualquier parte.
+ */
 export function filtrar<T>(opciones: Opcion<T>[], texto: string) {
-  const q = normal(texto.trim())
-  if (!q) return opciones
-  return opciones.filter((o) => normal(`${o.etiqueta} ${o.buscar ?? ''}`).includes(q))
+  const palabras = normal(texto.trim()).split(/\s+/).filter(Boolean)
+  if (!palabras.length) return opciones
+  const textos = opciones.map((o) => normal(`${o.etiqueta} ${o.buscar ?? ''}`))
+  const alInicio = opciones.filter((_, i) => {
+    const suyas = textos[i].split(/[^a-z0-9ñ]+/)
+    return palabras.every((p) => suyas.some((s) => s.startsWith(p)))
+  })
+  return alInicio.length ? alInicio : opciones.filter((_, i) => palabras.every((p) => textos[i].includes(p)))
 }
 
 interface Comun {
@@ -47,6 +57,8 @@ interface Comun {
   alAbrir?: (abierto: boolean) => void
   /** Lo que se ve en la celda, si no basta el nombre de la opción. */
   mostrar?: ReactNode
+  /** El texto gris del buscador. */
+  pistaBusqueda?: string
 }
 
 function Disparador({
@@ -85,30 +97,69 @@ function Disparador({
   )
 }
 
-function Buscador({ valor, alCambiar, alTeclear, enfocar }: { valor: string; alCambiar: (v: string) => void; alTeclear: (e: KeyboardEvent<HTMLInputElement>) => void; enfocar: boolean }) {
+/**
+ * La caja de búsqueda de la lista. En el celular es grande (letra de 16 px:
+ * así el navegador no hace zoom) y el botón del teclado dice «Buscar»; Enter
+ * elige lo primero que aparece.
+ */
+function Buscador({
+  valor,
+  alCambiar,
+  alTeclear,
+  enfocar,
+  pista = 'Buscar…',
+}: {
+  valor: string
+  alCambiar: (v: string) => void
+  alTeclear: (e: KeyboardEvent<HTMLInputElement>) => void
+  enfocar: boolean
+  pista?: string
+}) {
   const ref = useRef<HTMLInputElement>(null)
   useEffect(() => {
     if (enfocar) ref.current?.focus()
   }, [enfocar])
   return (
-    <label className="flex shrink-0 items-center gap-2 border-b border-reja px-3">
-      <Icono d={mdiMagnify} className="size-[18px] text-tinta-3" />
-      <input
-        ref={ref}
-        value={valor}
-        onChange={(e) => alCambiar(e.target.value)}
-        onKeyDown={alTeclear}
-        placeholder="Buscar…"
-        className="h-10 min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-tinta-4"
-      />
-    </label>
+    <div className="shrink-0 border-b border-reja bg-gris-50 p-2 sm:bg-hoja sm:p-0">
+      <label className="flex h-12 items-center gap-2 border border-reja-2 bg-hoja pl-3 focus-within:border-azul sm:h-10 sm:border-0 sm:pl-3">
+        <Icono d={mdiMagnify} className="size-5 shrink-0 text-tinta-3 sm:size-[18px]" />
+        <input
+          ref={ref}
+          type="search"
+          value={valor}
+          onChange={(e) => alCambiar(e.target.value)}
+          onKeyDown={alTeclear}
+          placeholder={pista}
+          aria-label={pista}
+          enterKeyHint="search"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          className="h-full min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-tinta-4 sm:text-[14px] [&::-webkit-search-cancel-button]:hidden"
+        />
+        {valor && (
+          <button
+            type="button"
+            onClick={() => {
+              alCambiar('')
+              ref.current?.focus()
+            }}
+            aria-label="Borrar búsqueda"
+            className="grid h-full w-11 shrink-0 place-items-center text-tinta-3 hover:text-tinta sm:w-9"
+          >
+            <Icono d={mdiCloseCircle} className="size-5 sm:size-[18px]" />
+          </button>
+        )}
+      </label>
+    </div>
   )
 }
 
-function useLista<T>(opciones: Opcion<T>[], abierto: boolean, conBuscador: boolean) {
+function useLista<T>(opciones: Opcion<T>[], abierto: boolean, conBuscador: boolean, buscarEn?: Opcion<T>[]) {
   const [texto, setTexto] = useState('')
   const [activo, setActivo] = useState(0)
-  const visibles = useMemo(() => filtrar(opciones, texto), [opciones, texto])
+  const visibles = useMemo(() => filtrar(texto.trim() && buscarEn ? buscarEn : opciones, texto), [opciones, buscarEn, texto])
   useEffect(() => {
     if (!abierto) setTexto('')
   }, [abierto])
@@ -128,6 +179,7 @@ function useLista<T>(opciones: Opcion<T>[], abierto: boolean, conBuscador: boole
 
 function Fila<T>({
   op,
+  anterior,
   activa,
   elegida,
   multiple,
@@ -136,6 +188,8 @@ function Fila<T>({
   id,
 }: {
   op: Opcion<T>
+  /** La opción de arriba: si es de otro grupo, aquí empieza uno. */
+  anterior?: Opcion<T>
   activa: boolean
   elegida: boolean
   multiple?: boolean
@@ -149,7 +203,9 @@ function Fila<T>({
   }, [activa])
   return (
     <>
-      {op.grupo && <div className="sticky top-0 z-[1] bg-gris-100 px-3 py-1 text-[11.5px] font-medium tracking-wide text-tinta-2 uppercase">{op.grupo}</div>}
+      {op.grupo && op.grupo !== anterior?.grupo && (
+        <div className="sticky top-0 z-[1] bg-gris-100 px-3 py-1 text-[11.5px] font-medium tracking-wide text-tinta-2 uppercase">{op.grupo}</div>
+      )}
       <button
         ref={ref}
         id={id}
@@ -159,14 +215,14 @@ function Fila<T>({
         disabled={op.deshabilitada}
         onClick={alElegir}
         onPointerMove={alPasar}
-        className={`flex min-h-11 w-full items-center gap-2.5 px-3 text-left text-[15px] sm:min-h-9 sm:text-[14px] ${
+        className={`flex min-h-12 w-full items-center gap-2.5 px-3 text-left text-[16px] sm:min-h-9 sm:text-[14px] ${
           activa ? 'bg-azul-suave' : ''
         } ${elegida && !multiple ? 'font-medium text-azul-oscuro' : ''} disabled:text-tinta-4`}
       >
         {multiple && <Icono d={elegida ? mdiCheckboxMarked : mdiCheckboxBlankOutline} className={`size-5 ${elegida ? 'text-verde-2' : 'text-tinta-3'}`} />}
         {op.icono && <Icono d={op.icono} className={`size-[18px] ${op.deshabilitada ? 'text-tinta-4' : 'text-tinta-2'}`} />}
         <span className="min-w-0 flex-1 truncate">{op.etiqueta}</span>
-        {op.detalle && <span className="shrink-0 pl-3 text-[13px] text-tinta-3 tabular-nums">{op.detalle}</span>}
+        {op.detalle && <span className="shrink-0 pl-3 text-[14px] text-tinta-3 tabular-nums sm:text-[13px]">{op.detalle}</span>}
         {!multiple && <Icono d={mdiCheck} className={`size-[18px] ${elegida ? 'text-azul' : 'invisible'}`} />}
       </button>
     </>
@@ -179,6 +235,7 @@ export function Desplegable<T>({
   alCambiar,
   limpiar,
   buscador,
+  buscarEn,
   ...comun
 }: Comun & {
   valor: T | null
@@ -187,6 +244,8 @@ export function Desplegable<T>({
   /** Agrega arriba la opción que deja la celda vacía, con este nombre («—», «Sin detalle»). */
   limpiar?: { etiqueta: string; alElegir: () => void }
   buscador?: boolean
+  /** Dónde se busca al escribir, si no es la misma lista (en «Producto», cada plato y no solo su familia). */
+  buscarEn?: Opcion<T>[]
 }) {
   const [abiertoPropio, setAbiertoPropio] = useState(false)
   const abierto = comun.abierto ?? abiertoPropio
@@ -197,7 +256,7 @@ export function Desplegable<T>({
   const boton = useRef<HTMLButtonElement>(null)
   const idLista = useId()
   const conBuscador = buscador ?? opciones.length > 12
-  const lista = useLista(opciones, abierto, conBuscador)
+  const lista = useLista(opciones, abierto, conBuscador, buscarEn)
   const elegida = opciones.find((o) => o.valor === valor)
 
   // Al abrir, la lista se para en lo elegido.
@@ -258,8 +317,8 @@ export function Desplegable<T>({
           ))
         }
       />
-      <Flotante abierto={abierto} alCerrar={() => setAbierto(false)} ancla={boton} titulo={comun.titulo} ancho={comun.ancho}>
-        {conBuscador && <Buscador valor={lista.texto} alCambiar={lista.setTexto} alTeclear={teclas} enfocar={!esCelular()} />}
+      <Flotante abierto={abierto} alCerrar={() => setAbierto(false)} ancla={boton} titulo={comun.titulo} ancho={comun.ancho} alto={conBuscador}>
+        {conBuscador && <Buscador valor={lista.texto} alCambiar={lista.setTexto} alTeclear={teclas} enfocar={!esCelular()} pista={comun.pistaBusqueda} />}
         <div id={idLista} role="listbox" aria-label={comun.titulo} className="barra-fina min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">
           {limpiar && !lista.texto && (
             <button
@@ -278,6 +337,7 @@ export function Desplegable<T>({
               key={String(op.valor)}
               id={`${idLista}-${i}`}
               op={op}
+              anterior={lista.visibles[i - 1]}
               activa={i === lista.activo}
               elegida={op.valor === valor}
               alElegir={() => elegir(op)}
@@ -371,13 +431,14 @@ export function DesplegableMultiple<T>({
           </div>
         }
       >
-        {conBuscador && <Buscador valor={lista.texto} alCambiar={lista.setTexto} alTeclear={teclas} enfocar={!esCelular()} />}
+        {conBuscador && <Buscador valor={lista.texto} alCambiar={lista.setTexto} alTeclear={teclas} enfocar={!esCelular()} pista={comun.pistaBusqueda} />}
         <div id={idLista} role="listbox" aria-multiselectable aria-label={comun.titulo} className="barra-fina min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">
           {lista.visibles.map((op, i) => (
             <Fila
               key={String(op.valor)}
               id={`${idLista}-${i}`}
               op={op}
+              anterior={lista.visibles[i - 1]}
               multiple
               activa={i === lista.activo}
               elegida={valores.includes(op.valor)}

@@ -20,7 +20,12 @@ export interface Pestana {
   aviso?: boolean
 }
 
-export function Pestanas({ grupos, activa, inicio }: { grupos: Pestana[][]; activa: string; inicio?: React.ReactNode }) {
+/**
+ * `grandes`: en el celular las pestañas se reparten el ancho, más altas y con
+ * el ícono arriba (la caja se maneja con el pulgar). En pantalla grande, igual
+ * que siempre.
+ */
+export function Pestanas({ grupos, activa, inicio, grandes = false }: { grupos: Pestana[][]; activa: string; inicio?: React.ReactNode; grandes?: boolean }) {
   const lista = useRef<HTMLDivElement>(null)
 
   // La pestaña activa siempre a la vista, aunque sea la M25.
@@ -35,9 +40,9 @@ export function Pestanas({ grupos, activa, inicio }: { grupos: Pestana[][]; acti
       className="no-imprimir fixed inset-x-0 bottom-0 z-30 flex border-t border-reja bg-gris-100 pb-[env(safe-area-inset-bottom)]"
     >
       {inicio}
-      <div ref={lista} className="sin-barra flex h-11 min-w-0 flex-1 overflow-x-auto">
+      <div ref={lista} className={`sin-barra flex min-w-0 flex-1 overflow-x-auto ${grandes ? 'h-16 sm:h-11' : 'h-11'}`}>
         {grupos.map((grupo, g) => (
-          <div key={g} className={`flex shrink-0 ${g > 0 ? 'ml-2 border-l border-reja-2' : ''}`}>
+          <div key={g} className={`flex ${grandes ? 'min-w-0 flex-1 sm:flex-none sm:shrink-0' : 'shrink-0'} ${g > 0 ? 'ml-2 border-l border-reja-2' : ''}`}>
             {grupo.map((p) => {
               const esta = p.clave === activa
               return (
@@ -47,11 +52,13 @@ export function Pestanas({ grupos, activa, inicio }: { grupos: Pestana[][]; acti
                   replace
                   aria-current={esta ? 'page' : undefined}
                   title={p.titulo}
-                  className={`relative flex h-full shrink-0 items-center gap-1.5 border-r border-reja px-3.5 text-[13.5px] transition-colors ${
-                    esta ? 'bg-hoja font-medium text-verde-2 shadow-[0_-1px_0_var(--color-reja)]' : 'text-tinta-2 hover:bg-gris-150 hover:text-tinta'
-                  }`}
+                  className={`relative flex h-full items-center border-r border-reja transition-colors ${
+                    grandes
+                      ? 'min-w-0 flex-1 flex-col justify-center gap-1 px-1 text-[14px] sm:flex-none sm:shrink-0 sm:flex-row sm:gap-1.5 sm:px-3.5 sm:text-[13.5px]'
+                      : 'shrink-0 gap-1.5 px-3.5 text-[13.5px]'
+                  } ${esta ? 'bg-hoja font-medium text-verde-2 shadow-[0_-1px_0_var(--color-reja)]' : 'text-tinta-2 hover:bg-gris-150 hover:text-tinta'}`}
                 >
-                  {p.icono && <Icono d={p.icono} className="size-[17px]" />}
+                  {p.icono && <Icono d={p.icono} className={grandes ? 'size-6 sm:size-[17px]' : 'size-[17px]'} />}
                   {p.corta ? (
                     <>
                       <span className="sm:hidden">{p.corta}</span>

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { mdiAlert, mdiClose, mdiHelpCircle } from '@mdi/js'
 import { Boton, type Variante } from './boton'
+import { useTeclado } from './flotante'
 import { Icono } from './icono'
 
 /**
@@ -25,6 +26,8 @@ export function Dialogo({
   ancho?: string
 }) {
   const caja = useRef<HTMLDivElement>(null)
+  // En el celular la ventana sale desde abajo: con el teclado abierto, se sube encima de él.
+  const teclado = useTeclado(abierto)
   useEffect(() => {
     if (!abierto) return
     const tecla = (e: KeyboardEvent) => e.key === 'Escape' && alCerrar()
@@ -43,7 +46,10 @@ export function Dialogo({
   return createPortal(
     <AnimatePresence>
       {abierto && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6 print:hidden">
+        <div
+          className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6 print:hidden"
+          style={teclado ? { paddingBottom: teclado.abajo } : undefined}
+        >
           <motion.div className="absolute inset-0 bg-black/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={alCerrar} />
           <motion.div
             ref={caja}
@@ -55,6 +61,7 @@ export function Dialogo({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
+            style={teclado ? { maxHeight: teclado.alto - 8 } : undefined}
             className={`sombra-menu relative flex max-h-[92dvh] w-full flex-col border border-reja-2 bg-hoja outline-none ${ancho}`}
           >
             <div className="flex h-11 shrink-0 items-center justify-between bg-verde-3 pr-1 pl-4 text-white">
@@ -65,7 +72,8 @@ export function Dialogo({
             </div>
             <div className="barra-fina min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
             {botones && (
-              <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-reja bg-gris-50 px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-5">
+              // En el celular los botones se reparten el ancho y son más altos: se tocan con el pulgar.
+              <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-reja bg-gris-50 px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] max-sm:[&>.boton]:h-12 max-sm:[&>.boton]:flex-1 max-sm:[&>.boton]:text-[15.5px] sm:px-5">
                 {botones}
               </div>
             )}

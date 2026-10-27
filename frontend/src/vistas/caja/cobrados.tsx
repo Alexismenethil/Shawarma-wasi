@@ -45,8 +45,8 @@ export function Cobrados({ caja }: { caja: ArqueoCaja }) {
       <section className="hoja sombra-hoja">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-reja px-3 py-2.5">
           <Icono d={mdiCheckAll} className="size-5 text-verde-2" />
-          <h2 className="text-[15.5px] font-bold">Cobrados en este turno</h2>
-          <span className="text-[13.5px] text-tinta-2 tabular-nums">
+          <h2 className="text-[17px] font-bold sm:text-[15.5px]">Cobrados en este turno</h2>
+          <span className="text-[14.5px] text-tinta-2 tabular-nums sm:text-[13.5px]">
             {cobros?.length ?? 0} notas · S/ {soles(total)}
           </span>
         </div>
@@ -68,14 +68,14 @@ export function Cobrados({ caja }: { caja: ArqueoCaja }) {
             {cobros.map((c) => (
               <li
                 key={c.pedidoId}
-                className="grid grid-cols-[minmax(0,1fr)_auto_40px] items-center gap-x-2 border-b border-reja px-3 py-2 text-[14px] sm:grid-cols-[64px_52px_64px_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.7fr)_96px_48px] sm:gap-0 sm:px-0 sm:py-0"
+                className="grid grid-cols-[minmax(0,1fr)_auto_48px] items-center gap-x-2 border-b border-reja py-2.5 pl-4 pr-1 text-[16px] sm:grid-cols-[64px_52px_64px_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.7fr)_96px_48px] sm:gap-0 sm:px-0 sm:py-0 sm:text-[14px]"
               >
-                <span className="flex min-w-0 flex-wrap items-center gap-x-2 sm:hidden">
-                  <b>{codigoMesa(c.mesa)}</b>
-                  <span className="text-tinta-3">
+                <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 sm:hidden">
+                  <b className="text-[17px]">{codigoMesa(c.mesa)}</b>
+                  <span className="text-[14px] text-tinta-3">
                     N° {c.numero} · {hora(c.cobradoEn)}
                   </span>
-                  <span className="w-full truncate text-[12.5px] text-tinta-2">{c.pagos.map((g) => nombre(g.metodo)).join(' + ')}</span>
+                  <span className="w-full truncate text-[14px] text-tinta-2">{c.pagos.map((g) => nombre(g.metodo)).join(' + ')}</span>
                 </span>
                 <span className="hidden h-11 items-center justify-center border-r border-reja text-[13px] text-tinta-2 tabular-nums sm:flex">{hora(c.cobradoEn)}</span>
                 <span className="hidden h-11 items-center justify-center border-r border-reja text-tinta-2 tabular-nums sm:flex">{c.numero}</span>
@@ -91,11 +91,11 @@ export function Cobrados({ caja }: { caja: ArqueoCaja }) {
                   ))}
                 </span>
                 <span className="hidden h-11 items-center truncate border-r border-reja px-2 text-tinta-2 sm:flex">{c.cobradoPor ?? ''}</span>
-                <b className="flex items-center justify-end font-bold tabular-nums sm:h-11 sm:border-r sm:border-reja sm:px-2.5">{soles(c.total)}</b>
+                <b className="flex items-center justify-end text-[17px] font-bold tabular-nums sm:h-11 sm:text-[14px] sm:border-r sm:border-reja sm:px-2.5">{soles(c.total)}</b>
                 <Menu
                   titulo={`${nombreMesa(c.mesa)} · N° ${c.numero}`}
                   disparador={<Icono d={mdiDotsVertical} className="size-5" />}
-                  className="mx-auto grid size-9 place-items-center text-tinta-2 hover:bg-gris-150 hover:text-tinta"
+                  className="mx-auto grid size-11 place-items-center text-tinta-2 sm:size-9 hover:bg-gris-150 hover:text-tinta"
                   acciones={[
                     { etiqueta: 'Reimprimir comprobante', icono: mdiPrinter, alElegir: () => void imprimir(c) },
                     { etiqueta: 'Corregir tipo de pago', icono: mdiCashEdit, alElegir: () => setCorrigiendo(c) },

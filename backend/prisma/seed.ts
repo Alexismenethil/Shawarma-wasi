@@ -27,8 +27,8 @@ const datos = require('./datos/catalogo.json') as {
 
 /**
  * Cada familia del Excel con su cocina. Cocina 1 saca la carta, cocina 2 los
- * shawarmas y lo de plancha, cocina 3 los emolientes y las bebidas. Se puede
- * reasignar desde Administración → Carta.
+ * shawarmas y lo de plancha, cocina 3 los emolientes y cocina 4 las bebidas.
+ * Se puede reasignar desde Administración → Carta.
  */
 const FAMILIAS: { clave: string; nombre: string; estacion: Estacion; icono: string; corte?: boolean }[] = [
   { clave: 'Shawarma', nombre: 'Shawarmas', estacion: 'SHAWARMAS', icono: 'shawarma', corte: true },
@@ -46,7 +46,7 @@ const FAMILIAS: { clave: string; nombre: string; estacion: Estacion; icono: stri
   { clave: 'Pizza', nombre: 'Pizzas', estacion: 'CARTA', icono: 'pizza' },
   { clave: 'Pan al Ajo', nombre: 'Pan al ajo', estacion: 'CARTA', icono: 'pan' },
   { clave: 'Pastas', nombre: 'Pastas', estacion: 'CARTA', icono: 'pasta' },
-  { clave: 'Emoliente', nombre: 'Emolientes', estacion: 'BEBIDAS', icono: 'emoliente' },
+  { clave: 'Emoliente', nombre: 'Emolientes', estacion: 'EMOLIENTES', icono: 'emoliente' },
   { clave: 'Calientito', nombre: 'Calientitos', estacion: 'BEBIDAS', icono: 'jarra' },
   { clave: 'Café-Chocolate', nombre: 'Café y chocolate', estacion: 'BEBIDAS', icono: 'taza' },
   { clave: 'Mate', nombre: 'Mates', estacion: 'BEBIDAS', icono: 'mate' },
@@ -62,7 +62,7 @@ const ADICIONAL_EN: Record<string, { estaciones: Estacion[]; familia?: string }>
   'Pastas Lomo': { estaciones: [], familia: 'Pastas' },
   'Pastas Chuleta': { estaciones: [], familia: 'Pastas' },
   'Pastas Pollo': { estaciones: [], familia: 'Pastas' },
-  Vaso: { estaciones: ['BEBIDAS'] },
+  Vaso: { estaciones: ['BEBIDAS', 'EMOLIENTES'] },
   Táper: { estaciones: [] },
 }
 
@@ -177,15 +177,18 @@ async function sembrarCarta() {
 /**
  * Las sucursales con que arranca el negocio. Plaza More y Plaza San Cristóbal
  * están en la misma ciudad y, por ahora, comparten la cocina de Plaza More
- * para la carta y los shawarmas; los emolientes los prepara cada local. La 3.ª
- * queda lista, con sus mesas y su personal, pero apagada hasta que abra. Todo
- * se cambia después en Administración → Sucursales.
+ * para la carta, los shawarmas y las bebidas; los emolientes los prepara cada
+ * local. La 3.ª queda lista, con sus mesas y su personal, pero apagada hasta
+ * que abra. Todo se cambia después en Administración → Sucursales.
  */
 const SUCURSALES: { nombre: string; encargado: string; activa?: boolean; cocinaEn?: string; compartidas?: Estacion[] }[] = [
   { nombre: 'Plaza More', encargado: 'more' },
-  { nombre: 'Plaza San Cristóbal', encargado: 'sancristobal', cocinaEn: 'Plaza More', compartidas: ['CARTA', 'SHAWARMAS'] },
+  { nombre: 'Plaza San Cristóbal', encargado: 'sancristobal', cocinaEn: 'Plaza More', compartidas: ['CARTA', 'SHAWARMAS', 'BEBIDAS'] },
   { nombre: 'Sucursal 3', encargado: 'sucursal3', activa: false },
 ]
+
+/** «carta, shawarmas y bebidas». */
+const enLista = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} y ${xs.at(-1)}` : (xs[0] ?? ''))
 
 async function sembrarMesas(sucursalId: number) {
   if ((await prisma.mesa.count({ where: { sucursalId } })) > 0) return false
@@ -284,7 +287,7 @@ async function sembrarNegocio(): Promise<Cuentas> {
       ],
     })
     cuentas.sucursales.push({ nombre: s.nombre, activa: s.activa ?? true, cocinaEn: s.cocinaEn, compartidas: s.compartidas, encargado, pins: suyos })
-    const cocina = s.cocinaEn ? ` · ${(s.compartidas ?? []).join(' y ').toLowerCase()} en la cocina de ${s.cocinaEn}` : ''
+    const cocina = s.cocinaEn ? ` · ${enLista((s.compartidas ?? []).map((e) => e.toLowerCase()))} en la cocina de ${s.cocinaEn}` : ''
     const pines = i === 0 ? 'PIN del .env' : 'PIN propios'
     console.log(`  ${s.nombre}${s.activa === false ? ' (apagada hasta que abra)' : ''}: 25 mesas y 10 para llevar, mozo, cocina y caja (${pines}) y encargado «${s.encargado}»${cocina}`)
   }
@@ -303,7 +306,7 @@ function escribirCuentas(c: Cuentas) {
   const base = url.pathname.slice(1) || 'base'
   const archivo = path.resolve(import.meta.dirname, '..', '..', `cuentas-${base}.local.md`)
   const fecha = new Date().toLocaleString('es-PE', { timeZone: 'America/Lima', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
-  const nombreCocina = { CARTA: 'carta', SHAWARMAS: 'shawarmas', BEBIDAS: 'emolientes y bebidas' } as const
+  const nombreCocina = { CARTA: 'carta', SHAWARMAS: 'shawarmas', BEBIDAS: 'bebidas', EMOLIENTES: 'emolientes' } as const
   const lineas = [
     '# Cuentas iniciales · Shawarma Wasi',
     '',
@@ -347,7 +350,7 @@ function escribirCuentas(c: Cuentas) {
       .filter((s) => s.cocinaEn)
       .map(
         (s) =>
-          `- **${s.nombre}** manda ${(s.compartidas ?? []).map((e) => nombreCocina[e]).join(' y ')} a la cocina de **${s.cocinaEn}**: allí salen en la misma pantalla que los de ${s.cocinaEn}, cada comanda con el nombre de su local. Sus emolientes y bebidas los prepara su propia cocina (pestaña «Cocina 3»).`,
+          `- **${s.nombre}** manda ${enLista((s.compartidas ?? []).map((e) => nombreCocina[e]))} a la cocina de **${s.cocinaEn}**: allí salen en la misma pantalla que los de ${s.cocinaEn}, cada comanda con el nombre de su local. Sus emolientes los prepara su propia cocina (pestaña «Cocina 3»).`,
       ),
     '- Se deshace en Administración → Sucursales → columna «Cocina» → «Cocina propia».',
     ...(c.sucursales.some((s) => !s.activa)

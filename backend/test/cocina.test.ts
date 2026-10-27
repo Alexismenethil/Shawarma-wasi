@@ -77,11 +77,14 @@ describe('cocina («Atención al Cliente»)', () => {
     const servido = await cocina.post(`/cocina/items/${item.id}`, { listo: false })
     assert.equal(servido.estado, 400)
 
-    const [bebidas] = await hoja('?estacion=BEBIDAS')
-    await mozo.post(`/items/${bebidas.items[0].id}/anular`)
-    assert.equal((await cocina.post(`/cocina/items/${bebidas.items[0].id}`, { listo: true })).estado, 404)
+    const [emolientes] = await hoja('?estacion=EMOLIENTES')
+    await mozo.post(`/items/${emolientes.items[0].id}/anular`)
+    assert.equal((await cocina.post(`/cocina/items/${emolientes.items[0].id}`, { listo: true })).estado, 404)
     // Lo anulado se sigue viendo en la hoja (en ámbar), hasta «Limpiar».
-    const [conAnulado] = await hoja('?estacion=BEBIDAS')
+    const [conAnulado] = await hoja('?estacion=EMOLIENTES')
     assert.equal(conAnulado.items[0].estado, 'ANULADO')
+    // Una pantalla puede mirar dos cocinas juntas (bebidas y emolientes); una cocina que no existe no se acepta.
+    assert.deepEqual((await hoja('?estacion=BEBIDAS,EMOLIENTES')).map((x) => x.items[0].estacion), ['EMOLIENTES'])
+    assert.equal((await cocina.get('/cocina?estacion=BEBIDAS,POSTRES')).estado, 400)
   })
 })

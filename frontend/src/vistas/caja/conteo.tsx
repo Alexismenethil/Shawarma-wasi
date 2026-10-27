@@ -34,7 +34,7 @@ export function ConteoEfectivo({ conteo, alCambiar }: { conteo: Conteo; alCambia
         const nombre = `${d.tipo === 'Billete' ? 'Billetes' : 'Monedas'} de ${denominacion(d.valor)}`
         return (
           <div key={d.valor} className={`${fila} ${i === 5 ? 'border-t border-t-reja-2' : ''} ${cantidad ? 'bg-menta-suave' : ''}`} role="row">
-            <span className="flex h-10 items-center gap-2 px-3 text-[14px]" role="cell">
+            <span className="flex h-12 items-center gap-2 px-3 text-[15.5px] sm:h-10 sm:text-[14px]" role="cell">
               <Icono d={d.tipo === 'Billete' ? mdiCash : mdiCircleMultiple} className={`size-[18px] ${d.tipo === 'Billete' ? 'text-verde-2' : 'text-ambar-oscuro'}`} />
               <span className="text-tinta-3">{d.tipo}</span>
               <b className="font-medium tabular-nums">{denominacion(d.valor)}</b>
@@ -51,13 +51,13 @@ export function ConteoEfectivo({ conteo, alCambiar }: { conteo: Conteo; alCambia
                   inputMode="numeric"
                   placeholder="0"
                   aria-label={nombre}
-                  className="h-full w-full bg-campo/40 px-2 text-center text-[15px] tabular-nums outline-none placeholder:text-tinta-4 focus:bg-hoja focus:shadow-[inset_0_0_0_2px_var(--color-azul)]"
+                  className="h-full w-full bg-campo/40 px-2 text-center text-[18px] font-medium tabular-nums sm:text-[15px] sm:font-normal outline-none placeholder:text-tinta-4 focus:bg-hoja focus:shadow-[inset_0_0_0_2px_var(--color-azul)]"
                 />
               ) : (
                 <span className="flex h-full items-center justify-center tabular-nums">{cantidad || ''}</span>
               )}
             </span>
-            <span className="flex items-center justify-end px-3 text-[14px] tabular-nums" role="cell">
+            <span className="flex items-center justify-end px-3 text-[15.5px] tabular-nums sm:text-[14px]" role="cell">
               {cantidad ? soles(d.valor * cantidad) : <span className="text-tinta-4">—</span>}
             </span>
           </div>

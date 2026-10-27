@@ -65,7 +65,7 @@ export function Movimientos({ caja }: { caja: ArqueoCaja }) {
       <section className="hoja sombra-hoja">
         <div className="flex items-center gap-2 border-b border-reja px-3 py-2.5">
           <Icono d={mdiSwapVertical} className="size-5 text-azul-oscuro" />
-          <h2 className="text-[15.5px] font-bold">Anotar un ingreso o egreso de caja</h2>
+          <h2 className="text-[17px] font-bold sm:text-[15.5px]">Anotar un ingreso o egreso de caja</h2>
         </div>
         <form
           className="grid gap-3 p-3 sm:grid-cols-[auto_150px_minmax(0,1fr)_auto] sm:items-end"
@@ -82,7 +82,7 @@ export function Movimientos({ caja }: { caja: ArqueoCaja }) {
                 role="radio"
                 aria-checked={tipo === t}
                 onClick={() => setTipo(t)}
-                className={`flex h-10 items-center justify-center gap-1.5 px-3 text-[14px] ${
+                className={`flex h-12 items-center justify-center gap-1.5 px-3 text-[16px] sm:h-10 sm:text-[14px] ${
                   tipo === t ? (t === 'EGRESO' ? 'bg-rojo-oscuro font-medium text-white' : 'bg-verde-2 font-medium text-white') : 'bg-hoja text-tinta-2 hover:bg-gris-50'
                 }`}
               >
@@ -91,7 +91,7 @@ export function Movimientos({ caja }: { caja: ArqueoCaja }) {
               </button>
             ))}
           </div>
-          <label className="grid gap-1 text-[12.5px] text-tinta-2">
+          <label className="grid gap-1 text-[14px] text-tinta-2 sm:text-[12.5px]">
             Monto (S/)
             <input
               value={monto}
@@ -99,10 +99,10 @@ export function Movimientos({ caja }: { caja: ArqueoCaja }) {
               inputMode="decimal"
               placeholder="0.00"
               aria-label="Monto"
-              className="campo h-10 text-right text-[15px] tabular-nums"
+              className="campo h-12 text-right text-[19px] font-medium tabular-nums sm:h-10 sm:text-[15px]"
             />
           </label>
-          <label className="grid gap-1 text-[12.5px] text-tinta-2">
+          <label className="grid gap-1 text-[14px] text-tinta-2 sm:text-[12.5px]">
             Concepto
             <input
               value={concepto}
@@ -110,10 +110,10 @@ export function Movimientos({ caja }: { caja: ArqueoCaja }) {
               list="conceptos-caja"
               placeholder={tipo === 'EGRESO' ? 'Ej. Compra de gas' : 'Ej. Sencillo para vuelto'}
               aria-label="Concepto"
-              className="campo h-10"
+              className="campo h-12 text-[16px] sm:h-10 sm:text-[14px]"
             />
           </label>
-          <Boton type="submit" variante={tipo === 'EGRESO' ? 'peligro' : 'guardar'} icono={mdiPlus} disabled={!valido} cargando={guardando} className="h-10">
+          <Boton type="submit" variante={tipo === 'EGRESO' ? 'peligro' : 'guardar'} icono={mdiPlus} disabled={!valido} cargando={guardando} className="h-12 text-[16px] sm:h-10 sm:text-[14px]">
             Anotar
           </Boton>
           <datalist id="conceptos-caja">
@@ -136,7 +136,7 @@ export function Movimientos({ caja }: { caja: ArqueoCaja }) {
           <p className="px-4 py-10 text-center text-[14px] text-tinta-3">Sin ingresos ni egresos en este turno.</p>
         ) : (
           caja.movimientos.map((m) => (
-            <div key={m.id} className="grid min-h-11 grid-cols-[60px_minmax(0,1fr)_96px_48px] items-center border-b border-reja text-[14px] sm:grid-cols-[64px_minmax(0,1fr)_minmax(0,0.5fr)_110px_48px]">
+            <div key={m.id} className="grid min-h-12 grid-cols-[60px_minmax(0,1fr)_96px_48px] items-center border-b border-reja text-[16px] sm:min-h-11 sm:text-[14px] sm:grid-cols-[64px_minmax(0,1fr)_minmax(0,0.5fr)_110px_48px]">
               <span className="text-center text-[13px] text-tinta-2 tabular-nums">{hora(m.creadoEn)}</span>
               <span className="flex min-w-0 items-center gap-2 px-2">
                 <Icono d={m.tipo === 'EGRESO' ? mdiArrowUpBold : mdiArrowDownBold} className={`size-4 shrink-0 ${m.tipo === 'EGRESO' ? 'text-rojo' : 'text-verde-2'}`} />
@@ -157,7 +157,7 @@ export function Movimientos({ caja }: { caja: ArqueoCaja }) {
             </div>
           ))
         )}
-        <div className="grid grid-cols-2 bg-gris-100 text-[13.5px]">
+        <div className="grid grid-cols-2 bg-gris-100 text-[15px] sm:text-[13.5px]">
           <span className="flex h-10 items-center gap-1.5 border-r border-reja px-3">
             <Icono d={mdiArrowDownBold} className="size-4 text-verde-2" /> Entró <b className="ml-auto font-medium tabular-nums">{soles(caja.ingresos)}</b>
           </span>
@@ -166,9 +166,6 @@ export function Movimientos({ caja }: { caja: ArqueoCaja }) {
           </span>
         </div>
       </section>
-      <p className="px-3 text-[12.5px] text-tinta-3 sm:px-0">
-        Hora de apertura: {hora(caja.abiertaEn)}. Cada movimiento queda con su hora y quién lo anotó; solo esa persona o la encargada puede quitarlo mientras la caja siga abierta.
-      </p>
     </div>
   )
 }

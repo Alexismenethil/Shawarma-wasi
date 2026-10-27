@@ -357,6 +357,22 @@ export async function servir(sucursalId: number, pedidoId: number, itemIds?: num
   return obtenerPedido(sucursalId, pedidoId)
 }
 
+/**
+ * El cliente cambia de idea: se lo lleva, o al final se queda a comer. Cambia
+ * la «L:» / «M:» de las líneas (todas, o las que se indiquen) y cocina lo ve al
+ * instante para empacarlo o servirlo en plato.
+ */
+export async function cambiarParaLlevar(sucursalId: number, pedidoId: number, paraLlevar: boolean, itemIds?: number[]) {
+  const pedido = await notaDe(sucursalId, pedidoId)
+  if (pedido.cobradoEn || pedido.estado !== 'ABIERTO') throw new ErrorNegocio('La nota ya está cerrada.')
+  await prisma.itemPedido.updateMany({
+    where: { pedidoId, estado: { not: 'ANULADO' }, ...(itemIds?.length && { id: { in: itemIds } }) },
+    data: { paraLlevar },
+  })
+  avisar({ mesas: true, cocina: true, pedidoId }, sucursalId)
+  return obtenerPedido(sucursalId, pedidoId)
+}
+
 /** El mozo avisa a caja que la mesa pide la cuenta: caja la ve marcada y suena. */
 export async function pedirCuenta(sucursalId: number, pedidoId: number) {
   const pedido = await prisma.pedido.findFirst({ where: { id: pedidoId, sucursalId }, include: { mesa: true } })

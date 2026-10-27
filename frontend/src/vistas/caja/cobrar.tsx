@@ -66,11 +66,11 @@ export function PorCobrar({ mesas }: { mesas: MesaResumen[] | null }) {
       <section className={`hoja sombra-hoja self-start ${elegida ? 'hidden lg:block' : ''}`}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-reja px-3 py-2.5">
           <Icono d={mdiReceiptTextOutline} className="size-5 text-azul-oscuro" />
-          <h2 className="text-[15.5px] font-bold">Notas por cobrar</h2>
-          <span className="text-[13.5px] text-tinta-2 tabular-nums">
+          <h2 className="text-[17px] font-bold lg:text-[15.5px]">Notas por cobrar</h2>
+          <span className="text-[15px] text-tinta-2 tabular-nums lg:text-[13.5px]">
             {notas.length} · S/ {soles(total)}
           </span>
-          <Link to="/mozo" className="boton boton-claro ml-auto h-9">
+          <Link to="/mozo" className="boton boton-claro ml-auto h-11 text-[15px] lg:h-9 lg:text-[14px]">
             <Icono d={mdiPencilPlus} className="size-[18px]" /> Anotar pedido
           </Link>
         </div>
@@ -90,8 +90,7 @@ export function PorCobrar({ mesas }: { mesas: MesaResumen[] | null }) {
         ) : notas.length === 0 ? (
           <div className="grid place-items-center gap-2 px-6 py-16 text-center">
             <Icono d={mdiCheckCircle} className="size-10 text-verde-1" />
-            <p className="text-[15px] font-medium">No hay nada por cobrar</p>
-            <p className="text-[13.5px] text-tinta-2">Las notas que anoten los mozos aparecen aquí al instante.</p>
+            <p className="text-[16px] font-medium">No hay nada por cobrar</p>
           </div>
         ) : (
           <ul>
@@ -105,21 +104,21 @@ export function PorCobrar({ mesas }: { mesas: MesaResumen[] | null }) {
                   <button
                     onClick={() => elegir(p.id)}
                     aria-current={activa || undefined}
-                    className={`relative grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 border-b border-reja px-3 py-2.5 text-left text-[14px] transition-colors lg:grid-cols-[52px_64px_minmax(0,1fr)_minmax(0,0.8fr)_128px_84px_96px] lg:gap-0 lg:px-0 lg:py-0 ${
+                    className={`relative grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 border-b border-reja px-4 py-3.5 text-left text-[16px] transition-colors lg:grid-cols-[52px_64px_minmax(0,1fr)_minmax(0,0.8fr)_128px_84px_96px] lg:gap-0 lg:px-0 lg:py-0 lg:text-[14px] ${
                       activa ? 'bg-azul-suave' : 'hover:bg-gris-50'
                     }`}
                   >
                     {activa && <span className="absolute inset-y-0 left-0 w-1 bg-azul-oscuro" />}
                     {/* Celular: dos renglones */}
                     <span className="flex min-w-0 items-center gap-2 lg:hidden">
-                      <b className="font-bold">{codigoMesa(m)}</b>
-                      <span className="text-tinta-3">N° {p.numero}</span>
+                      <b className="text-[18px] font-bold">{codigoMesa(m)}</b>
+                      <span className="text-[14px] text-tinta-3">N° {p.numero}</span>
                       <span className="truncate text-tinta-2">{p.cliente ?? p.mozo ?? ''}</span>
                     </span>
-                    <b className="text-right text-[15px] font-bold tabular-nums lg:hidden">{soles(p.total)}</b>
-                    <span className="flex items-center gap-2 text-[12.5px] lg:hidden">
-                      <span className={`flex items-center gap-1 px-1.5 py-px ${tono}`}>
-                        {pide && <Icono d={mdiBellRing} className="animate-latido size-3.5" />}
+                    <b className="text-right text-[19px] font-bold tabular-nums lg:hidden">{soles(p.total)}</b>
+                    <span className="flex items-center gap-2 text-[14px] lg:hidden">
+                      <span className={`flex items-center gap-1 px-2 py-0.5 font-medium ${tono}`}>
+                        {pide && <Icono d={mdiBellRing} className="animate-latido size-4" />}
                         {pide ? 'Pide la cuenta' : ESTADO_EN_CAJA[m.estado]}
                       </span>
                       <span className="text-tinta-3">{haceCuanto(p.cuentaPedidaEn ?? p.desde, ahora)}</span>
@@ -172,8 +171,8 @@ function CobroNota({ pedidoId, alVolver, siguiente, alSiguiente }: { pedidoId: n
   const impresion = useImprimirAlCobrar(pedido?.cobradoEn)
 
   const volver = (
-    <button onClick={alVolver} className="flex h-10 items-center gap-1.5 px-2 text-[14px] text-azul hover:bg-azul-suave lg:hidden">
-      <Icono d={mdiArrowLeft} className="size-5" /> Todas las notas
+    <button onClick={alVolver} className="flex h-12 items-center gap-2 px-3 text-[16px] font-medium text-azul hover:bg-azul-suave lg:hidden">
+      <Icono d={mdiArrowLeft} className="size-6" /> Todas las notas
     </button>
   )
 
@@ -232,6 +231,20 @@ function CobroNota({ pedidoId, alVolver, siguiente, alSiguiente }: { pedidoId: n
     }
   }
 
+  // Cobrar, o pasar a la siguiente nota cuando ya se cobró.
+  const principal = (clase: string) =>
+    pagado ? (
+      siguiente && (
+        <Boton variante="oscuro" onClick={() => alSiguiente(siguiente)} className={clase}>
+          Siguiente nota
+        </Boton>
+      )
+    ) : (
+      <Boton variante="cobrar" icono={mdiCashCheck} onClick={() => void cobrar()} cargando={cobrando} className={clase}>
+        Cobrar S/ {soles(pedido.total)}
+      </Boton>
+    )
+
   return (
     <div className="hoja sombra-hoja relative">
       <div className="flex items-center justify-between border-b border-reja pr-2 lg:hidden">{volver}</div>
@@ -241,12 +254,12 @@ function CobroNota({ pedidoId, alVolver, siguiente, alSiguiente }: { pedidoId: n
         <span className="rotulo-negro">N°</span>
         <span className="flex items-center bg-campo px-3 font-bold tabular-nums">{pedido.numero}</span>
         <span className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2">
-          <b className="text-[17px] font-bold text-vino-3">{nombreMesa(pedido.mesa)}</b>
-          {pedido.cliente && <span className="truncate text-[14px] text-tinta-2">· {pedido.cliente}</span>}
+          <b className="text-[19px] font-bold text-vino-3 lg:text-[17px]">{nombreMesa(pedido.mesa)}</b>
+          {pedido.cliente && <span className="truncate text-[15px] text-tinta-2 lg:text-[14px]">· {pedido.cliente}</span>}
         </span>
         <span className="hidden items-center px-3 text-[13px] text-tinta-3 sm:flex">{hora(pedido.creadoEn)}</span>
       </div>
-      <p className="flex flex-wrap gap-x-3 gap-y-0.5 border-b border-reja bg-gris-50 px-3 py-1.5 text-[12.5px] text-tinta-2">
+      <p className="flex flex-wrap gap-x-3 gap-y-0.5 border-b border-reja bg-gris-50 px-3 py-1.5 text-[14px] text-tinta-2 lg:text-[12.5px]">
         {pedido.mozo && <span>Atendió: {pedido.mozo}</span>}
         {pedido.cuentaPedidaEn && !pagado && (
           <span className="flex items-center gap-1 font-medium text-azul">
@@ -268,12 +281,12 @@ function CobroNota({ pedidoId, alVolver, siguiente, alSiguiente }: { pedidoId: n
       </div>
       <ul className="barra-fina max-h-[42dvh] overflow-y-auto">
         {vivos.map((i) => (
-          <li key={i.id} className="grid grid-cols-[44px_minmax(0,1fr)_96px] border-b border-reja text-[14px]">
+          <li key={i.id} className="grid grid-cols-[44px_minmax(0,1fr)_96px] border-b border-reja text-[16px] lg:text-[14px]">
             <span className="flex items-start justify-center border-r border-reja pt-2 font-medium tabular-nums">{i.cantidad}</span>
             <span className="min-w-0 border-r border-reja px-2 py-1.5">
               <span className="block truncate">{i.nombre}</span>
               {(i.adicionales.length > 0 || i.detalle || i.paraLlevar || i.observacion) && (
-                <span className="block truncate text-[12.5px] text-tinta-3">
+                <span className="block truncate text-[14px] text-tinta-3 lg:text-[12.5px]">
                   {[i.adicionales.length ? `+ ${i.adicionales.map((a) => a.nombre).join(' + ')}` : '', textoDetalle(i.paraLlevar, i.detalle), i.observacion ?? ''].filter(Boolean).join(' · ')}
                 </span>
               )}
@@ -291,28 +304,26 @@ function CobroNota({ pedidoId, alVolver, siguiente, alSiguiente }: { pedidoId: n
           role="checkbox"
           aria-checked={impresion.activo}
           onClick={() => impresion.cambiar(!impresion.activo)}
-          className="mr-auto flex h-11 items-center gap-2 px-1 text-[13.5px] text-tinta-2"
+          className="mr-auto flex h-12 items-center gap-2.5 px-1 text-[15px] text-tinta-2 lg:h-11 lg:gap-2 lg:text-[13.5px]"
         >
-          <span className={`grid size-[18px] place-items-center border-2 ${impresion.activo ? 'border-verde-2 bg-verde-2 text-white' : 'border-tinta-3 bg-hoja'}`}>
-            {impresion.activo && <Icono d={mdiCheckBold} className="size-3.5" />}
+          <span
+            className={`grid size-[22px] place-items-center border-2 lg:size-[18px] ${impresion.activo ? 'border-verde-2 bg-verde-2 text-white' : 'border-tinta-3 bg-hoja'}`}
+          >
+            {impresion.activo && <Icono d={mdiCheckBold} className="size-4 lg:size-3.5" />}
           </span>
           Imprimir al cobrar
         </button>
-        <Boton icono={mdiPrinter} onClick={() => window.print()} className="h-11">
+        <Boton icono={mdiPrinter} onClick={() => window.print()} className="h-12 text-[15px] lg:h-11 lg:text-[14px]">
           {pagado ? 'Imprimir comprobante' : 'Imprimir cuenta'}
         </Boton>
-        {pagado ? (
-          siguiente && (
-            <Boton variante="oscuro" onClick={() => alSiguiente(siguiente)} className="h-11 min-w-36">
-              Siguiente nota
-            </Boton>
-          )
-        ) : (
-          <Boton variante="cobrar" icono={mdiCashCheck} onClick={() => void cobrar()} cargando={cobrando} className="h-11 min-w-44 text-[15px]">
-            Cobrar S/ {soles(pedido.total)}
-          </Boton>
-        )}
+        <span className="hidden lg:contents">{principal('h-11 min-w-44 text-[15px]')}</span>
       </div>
+      {/* En el celular el botón principal queda fijo abajo, siempre a mano del pulgar. */}
+      {(!pagado || siguiente) && (
+        <div className="sticky bottom-[calc(64px+env(safe-area-inset-bottom))] z-10 border-t border-reja bg-gris-50 p-2.5 sm:bottom-[calc(44px+env(safe-area-inset-bottom))] lg:hidden">
+          {principal('h-14 w-full text-[18px]')}
+        </div>
+      )}
 
       {pagado && <span className="sello pointer-events-none absolute right-6 bottom-20 px-3 py-1 text-[20px] text-verde-2 opacity-80">PAGADO</span>}
 

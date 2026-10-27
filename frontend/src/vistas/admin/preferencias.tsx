@@ -46,7 +46,7 @@ export function Preferencias() {
           </Panel>
           <Panel titulo="Por cocina">
             <Torta
-              datos={(d?.estaciones ?? []).map((e, i) => ({ nombre: nombreCocina(ajustes, e.estacion), valor: e.monto, color: [PALETA[4], PALETA[1], PALETA[5]][i] }))}
+              datos={(d?.estaciones ?? []).map((e, i) => ({ nombre: nombreCocina(ajustes, e.estacion), valor: e.monto, color: [PALETA[4], PALETA[1], PALETA[5], PALETA[3]][i] }))}
               formato={enSoles}
               tamano={150}
             />

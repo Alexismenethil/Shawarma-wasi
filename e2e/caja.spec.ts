@@ -39,7 +39,7 @@ test('caja: un egreso, el arqueo al momento, el cierre contando y la reapertura'
   await page.getByRole('button', { name: 'Reabrir caja' }).click()
   await page.getByRole('dialog', { name: 'Reabrir caja' }).getByRole('button', { name: 'Reabrir caja' }).click()
   await expect(page.getByText('Caja reabierta')).toBeVisible()
-  await expect(page.getByText(/^Caja abierta/).first()).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Hojas' })).toBeVisible()
 
   // Al salir con la caja abierta, el sistema lo recuerda
   await page.getByRole('button', { name: 'Cerrar sesión' }).click()
@@ -47,5 +47,5 @@ test('caja: un egreso, el arqueo al momento, el cierre contando y la reapertura'
   await expect(aviso).toBeVisible()
   await aviso.getByRole('button', { name: 'Cerrar caja' }).click()
   await expect(page).toHaveURL(/hoja=arqueo/)
-  await expect(page.getByText('1. Cuenta el dinero del cajón')).toBeVisible()
+  await expect(page.getByText('1. ¿Cuánto hay en el cajón?')).toBeVisible()
 })

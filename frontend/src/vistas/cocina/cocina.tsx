@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { mdiBroom, mdiCheckAll, mdiFullscreen, mdiVolumeHigh, mdiVolumeOff } from '@mdi/js'
+import { mdiBroom, mdiCheckAll, mdiFullscreen, mdiShopping, mdiSilverwareForkKnife, mdiVolumeHigh, mdiVolumeOff } from '@mdi/js'
 import type { ComandaCocina, Estacion, ItemPedido, Sucursal } from '@wasi/shared'
 import { ESTACIONES, NUMERO_ESTACION, codigoMesa, juntasEnCocina } from '@wasi/shared'
 import { api } from '../../lib/api'
@@ -30,10 +30,15 @@ import { textoDetalle } from '../mozo/filas'
 
 type Vista = Estacion | 'TODAS'
 
+const esVista = (v: string | null): v is Vista => !!v && (v === 'TODAS' || ESTACIONES.includes(v as Estacion))
+
 function leerVista(): Vista {
   try {
-    const v = localStorage.getItem('wasi.estacion') as Vista | null
-    return v && (v === 'TODAS' || ESTACIONES.includes(v as Estacion)) ? v : 'TODAS'
+    const v = localStorage.getItem('wasi.cocina')
+    if (esVista(v)) return v
+    // Antes la cocina 3 era «Emolientes y bebidas» (BEBIDAS): esa tablet sigue en su cocina 3, la de emolientes.
+    const antes = localStorage.getItem('wasi.estacion')
+    return antes === 'BEBIDAS' ? 'EMOLIENTES' : esVista(antes) ? antes : 'TODAS'
   } catch {
     return 'TODAS'
   }
@@ -55,7 +60,7 @@ const COLOR_FILA: Record<ItemPedido['estado'], string> = {
   ANULADO: 'bg-ambar',
 }
 const NOMBRE_ESTADO: Record<ItemPedido['estado'], string> = { PENDIENTE: 'Pendiente', LISTO: 'Atendido', ENTREGADO: 'Atendido', ANULADO: 'Anulado' }
-const FRANJA: Record<Estacion, string> = { CARTA: 'bg-naranja', SHAWARMAS: 'bg-vino', BEBIDAS: 'bg-turquesa-2' }
+const FRANJA: Record<Estacion, string> = { CARTA: 'bg-naranja', SHAWARMAS: 'bg-vino', EMOLIENTES: 'bg-turquesa-2', BEBIDAS: 'bg-oliva' }
 
 /** Las columnas de la hoja; la cabecera y las filas las comparten. */
 const COLUMNAS = 'lg:grid lg:grid-cols-[58px_74px_minmax(0,0.9fr)_54px_minmax(0,1.9fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.1fr)_92px_140px_44px]'
@@ -74,7 +79,9 @@ type Local = { nombre: string; color: string }
 
 export function Cocina() {
   const [params, setParams] = useSearchParams()
-  const vista: Vista = (params.get('e') as Vista | null) ?? leerVista()
+  const pedida = params.get('e')
+  const vista: Vista = esVista(pedida) ? pedida : leerVista()
+  const enVista = useMemo<Estacion[]>(() => (vista === 'TODAS' ? [...ESTACIONES] : [vista]), [vista])
   const ajustes = useAjustes()
   const { id: sucursalId, sucursales } = useSucursal()
   const [limpiado, setLimpiado] = useState(() => leerLimpiado(vista))
@@ -82,9 +89,9 @@ export function Cocina() {
   // Los locales cuyas comandas salen en esta hoja: más de uno = cocina compartida, y cada comanda lleva su local.
   const locales = useMemo<Sucursal[]>(() => {
     if (!sucursalId) return []
-    const ids = new Set((vista === 'TODAS' ? ESTACIONES : [vista]).flatMap((e) => juntasEnCocina(sucursales, sucursalId, e)))
+    const ids = new Set(enVista.flatMap((e) => juntasEnCocina(sucursales, sucursalId, e)))
     return sucursales.filter((s) => ids.has(s.id))
-  }, [sucursales, sucursalId, vista])
+  }, [sucursales, sucursalId, enVista])
   const compartida = locales.length > 1
   const localDe = (id: number): Local | null =>
     compartida ? { nombre: sucursales.find((s) => s.id === id)?.nombre ?? `Sucursal ${id}`, color: colorLocal(id) } : null
@@ -96,17 +103,31 @@ export function Cocina() {
   const [nuevas, setNuevas] = useState<Set<string>>(new Set())
   const [vistas, setVistas] = useState<Set<string> | null>(null)
 
+  // Con la pantalla apagada el navegador duerme y el aviso no suena: la de cocina se queda encendida.
+  useEffect(() => {
+    let candado: WakeLockSentinel | null = null
+    const pedir = () => {
+      if (document.visibilityState === 'visible') void navigator.wakeLock?.request('screen').then((c) => (candado = c), () => {})
+    }
+    pedir()
+    document.addEventListener('visibilitychange', pedir)
+    return () => {
+      document.removeEventListener('visibilitychange', pedir)
+      void candado?.release()
+    }
+  }, [])
+
   useEffect(() => {
     setLimpiado(leerLimpiado(vista))
     try {
-      localStorage.setItem('wasi.estacion', vista)
+      localStorage.setItem('wasi.cocina', vista)
     } catch {
       /* sin almacenamiento */
     }
   }, [vista])
 
   useCambios((c) => {
-    if (c.aviso?.tipo === 'nuevo' && (vista === 'TODAS' || c.aviso.estaciones.includes(vista))) {
+    if (c.aviso?.tipo === 'nuevo' && c.aviso.estaciones.some((e) => enVista.includes(e))) {
       sonarComanda()
       avisar(`Nuevo pedido · ${c.aviso.mesa}`, 'info')
     }
@@ -167,7 +188,7 @@ export function Cocina() {
     setLimpiado(ahoraIso)
   }
 
-  const pestanas = (['CARTA', 'SHAWARMAS', 'BEBIDAS'] as Estacion[]).map((e) => ({
+  const pestanas = ESTACIONES.map((e) => ({
     clave: e,
     etiqueta: nombreCocina(ajustes, e),
     corta: `Cocina ${NUMERO_ESTACION[e]}`,
@@ -200,6 +221,8 @@ export function Cocina() {
                 silenciar(!silencio)
                 setSilencio(!silencio)
                 despertarAudio()
+                // Al activarlo suena una vez: así se ajusta el volumen de la tablet.
+                if (silencio) sonarComanda()
               }}
             />
             <BotonIcono
@@ -310,6 +333,22 @@ export function Cocina() {
   )
 }
 
+/**
+ * Mesa o para llevar, de un vistazo: la bolsa en ámbar se nota (hay que
+ * empacar); el plato en gris acompaña sin hacer ruido.
+ */
+function ParaDonde({ llevar }: { llevar: boolean }) {
+  return llevar ? (
+    <span title="Para llevar" aria-label="Para llevar" className="grid size-6 shrink-0 place-items-center rounded-full bg-[#f6b26b] text-[#783f04]">
+      <Icono d={mdiShopping} className="size-[15px]" />
+    </span>
+  ) : (
+    <span title="Para mesa" aria-label="Para mesa" className="grid size-6 shrink-0 place-items-center rounded-full bg-black/[0.06] text-tinta-3">
+      <Icono d={mdiSilverwareForkKnife} className="size-[14px]" />
+    </span>
+  )
+}
+
 function GrupoComanda({
   comanda,
   ahora,
@@ -392,7 +431,10 @@ function GrupoComanda({
                 {item.cantidad}
               </span>
               <span className={`min-w-0 flex-1 text-[16px] leading-snug font-medium lg:flex lg:min-h-11 lg:items-center lg:border-r lg:border-black/10 lg:px-2 lg:py-1 lg:text-[14.5px] lg:leading-tight ${tachado}`}>
-                <span>{item.nombre}</span>
+                <span className="flex items-center gap-1.5">
+                  <ParaDonde llevar={item.paraLlevar} />
+                  <span className="min-w-0">{item.nombre}</span>
+                </span>
                 <span className="mt-0.5 block text-[13.5px] font-normal text-tinta-2 lg:hidden">
                   {[adicionales && `+ ${adicionales}`, detalle, item.observacion].filter(Boolean).join(' · ')}
                 </span>

@@ -56,28 +56,33 @@ export interface Sucursal {
 }
 
 /**
- * Las tres cocinas del local, en el orden en que las nombra el personal. Son
- * parte de cómo trabaja el local (cada comanda va a una), así que la lista es
- * fija; el nombre de cada una se edita en Administración → Datos del local.
+ * Las cocinas del local, en el orden en que las nombra el personal. Son parte
+ * de cómo trabaja el local (cada comanda va a una), así que la lista es fija;
+ * el nombre de cada una se edita en Administración → Datos del local. Los
+ * emolientes tienen la suya, aparte de las bebidas, porque con la cocina
+ * compartida cada local los prepara en su propia cocina.
  */
-export const ESTACIONES = ['CARTA', 'SHAWARMAS', 'BEBIDAS'] as const
+export const ESTACIONES = ['CARTA', 'SHAWARMAS', 'EMOLIENTES', 'BEBIDAS'] as const
 export type Estacion = (typeof ESTACIONES)[number]
 
-export const NUMERO_ESTACION: Record<Estacion, number> = { CARTA: 1, SHAWARMAS: 2, BEBIDAS: 3 }
+// Los emolientes siguen en la cocina 3, como siempre; las bebidas son la cocina nueva, la 4.
+export const NUMERO_ESTACION: Record<Estacion, number> = { CARTA: 1, SHAWARMAS: 2, EMOLIENTES: 3, BEBIDAS: 4 }
 
 /** Nombre de cada cocina mientras el local no ponga el suyo. */
 export const ESTACION_POR_DEFECTO: Record<Estacion, string> = {
   CARTA: 'Carta',
   SHAWARMAS: 'Shawarmas',
-  BEBIDAS: 'Emolientes y bebidas',
+  EMOLIENTES: 'Emolientes',
+  BEBIDAS: 'Bebidas',
 }
 
 /**
  * Cocina compartida (temporal). Plaza More y Plaza San Cristóbal están en la
- * misma ciudad y, por ahora, la carta y los shawarmas de las dos salen de una
- * sola cocina; los emolientes, cada local en la suya. Mientras dure, esas
- * comandas se ven en una sola pantalla con el nombre de su local, para que el
- * mozo sepa a dónde llevarlas. Se deshace en Administración → Sucursales.
+ * misma ciudad y, por ahora, la carta, los shawarmas y las bebidas de las dos
+ * salen de la cocina de Plaza More; los emolientes, cada local en la suya.
+ * Mientras dure, esas comandas se ven en una sola pantalla con el nombre de su
+ * local, para que el mozo sepa a dónde llevarlas. Se deshace en
+ * Administración → Sucursales.
  */
 export interface CocinaCompartida {
   /** La sucursal cuya cocina prepara. */

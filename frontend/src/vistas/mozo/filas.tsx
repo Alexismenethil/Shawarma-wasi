@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { mdiCancel, mdiCheck, mdiClose, mdiDotsVertical, mdiPlusBox } from '@mdi/js'
+import { mdiCancel, mdiCheck, mdiClose, mdiDotsVertical, mdiPlusBox, mdiShopping, mdiTableFurniture } from '@mdi/js'
 import type { Carta, FamiliaCarta, ItemPedido, ProductoCarta } from '@wasi/shared'
 import { adicionalesPara, precioLinea, type IndiceCarta, type LineaBorrador } from '../../lib/borrador'
 import { soles, varianteLegible } from '../../lib/formato'
@@ -74,18 +74,85 @@ function opcionesDetalle(carta: Carta | null, familia: FamiliaCarta | null | und
   ]
 }
 
-export function opcionesFamilia(carta: Carta | null): Opcion<number>[] {
+/**
+ * La celda «Producto»: sin escribir, la lista de familias (y al elegir una se
+ * abre su variante). Al escribir, aparecen directo los platos que coinciden,
+ * agrupados por familia, con su precio: «hawa» y se elige la Shawarma Hawaiana
+ * de un toque. El valor dice qué es: «f12» una familia, «p40» un producto.
+ */
+type ValorProducto = `f${number}` | `p${number}` | 'libre'
+
+const LIBRE: Opcion<ValorProducto> = { valor: 'libre', etiqueta: 'Otros (producto libre)', icono: mdiPlusBox, buscar: 'otro libre' }
+
+function opcionesFamilia(carta: Carta | null): Opcion<ValorProducto>[] {
   return [
     ...(carta?.familias ?? []).map((f) => ({
-      valor: f.id,
+      valor: `f${f.id}` as const,
       etiqueta: f.nombre,
       icono: iconoFamilia(f.icono),
       detalle: String(f.productos.length),
-      // Se puede buscar por el producto o su código: «huaman» encuentra Shawarmas.
-      buscar: f.productos.map((p) => `${p.nombre} ${p.codigo ?? ''}`).join(' '),
     })),
-    { valor: -1, etiqueta: 'Otros (producto libre)', icono: mdiPlusBox },
+    LIBRE,
   ]
+}
+
+function opcionesProductos(carta: Carta | null): Opcion<ValorProducto>[] {
+  return [
+    ...(carta?.familias ?? []).flatMap((f) =>
+      f.productos.map((p) => ({
+        valor: `p${p.id}` as const,
+        etiqueta: p.nombre,
+        icono: iconoFamilia(f.icono),
+        detalle: p.disponible ? soles(p.precio) : 'Agotado',
+        deshabilitada: !p.disponible,
+        grupo: f.nombre,
+        buscar: `${f.nombre} ${p.codigo ?? ''}`,
+      })),
+    ),
+    LIBRE,
+  ]
+}
+
+/** Lo que se eligió en la celda «Producto». */
+function leerProducto(carta: Carta | null, v: ValorProducto) {
+  if (v === 'libre') return { libre: true as const }
+  const id = Number(v.slice(1))
+  if (v[0] === 'f') return { familia: carta?.familias.find((f) => f.id === id) ?? null }
+  for (const f of carta?.familias ?? []) {
+    const p = f.productos.find((x) => x.id === id)
+    if (p) return { familia: f, producto: p }
+  }
+  return { familia: null }
+}
+
+/** La celda «Producto» con su buscador de platos. */
+function DesplegableProducto({
+  carta,
+  familia,
+  alElegir,
+  ...resto
+}: {
+  carta: Carta | null
+  familia: FamiliaCarta | null | undefined
+  alElegir: (eleccion: ReturnType<typeof leerProducto>) => void
+  vacio?: string
+  deshabilitado?: boolean
+}) {
+  const opciones = useMemo(() => opcionesFamilia(carta), [carta])
+  const productos = useMemo(() => opcionesProductos(carta), [carta])
+  return (
+    <Desplegable
+      titulo="Producto"
+      valor={familia ? (`f${familia.id}` as const) : null}
+      opciones={opciones}
+      buscarEn={productos}
+      buscador
+      pistaBusqueda="Buscar plato o código…"
+      alCambiar={(v) => alElegir(leerProducto(carta, v))}
+      ancho={300}
+      {...resto}
+    />
+  )
 }
 
 function opcionesVariante(familia: FamiliaCarta | null | undefined): Opcion<number>[] {
@@ -159,17 +226,15 @@ export function FilaBorrador({
         ) : (
           <>
             <Celda className="min-w-0 flex-1">
-              <Desplegable
-                titulo="Producto"
-                valor={familiaVista?.id ?? null}
-                opciones={opcionesFamilia(carta)}
-                alCambiar={(id) => {
-                  if (id === -1) return alLibre()
-                  const f = carta?.familias.find((x) => x.id === id) ?? null
-                  setOtraFamilia(f && f.id !== familia?.id ? f : null)
+              <DesplegableProducto
+                carta={carta}
+                familia={familiaVista}
+                alElegir={(e) => {
+                  if ('libre' in e) return alLibre()
+                  if (e.producto && e.familia) return cambiarProducto(e.producto, e.familia)
+                  setOtraFamilia(e.familia && e.familia.id !== familia?.id ? e.familia : null)
                   setAbrirVariante(true)
                 }}
-                ancho={260}
               />
             </Celda>
             <Celda className="min-w-0 flex-1">
@@ -298,18 +363,20 @@ export function FilaNueva({
           <span className="chip justify-center !bg-transparent text-tinta-4">1</span>
         </Celda>
         <Celda className="min-w-0 flex-1">
-          <Desplegable
-            titulo="Producto"
-            valor={familia?.id ?? null}
-            opciones={opcionesFamilia(carta)}
-            alCambiar={(id) => {
-              if (id === -1) return alLibre()
-              setFamilia(carta?.familias.find((f) => f.id === id) ?? null)
+          <DesplegableProducto
+            carta={carta}
+            familia={familia}
+            alElegir={(e) => {
+              if ('libre' in e) return alLibre()
+              if (e.producto) {
+                setFamilia(null)
+                return alElegir(e.producto)
+              }
+              setFamilia(e.familia)
               setAbrirVariante(true)
             }}
             vacio={deshabilitada ? 'Nota pagada' : 'Producto…'}
             deshabilitado={deshabilitada || !carta}
-            ancho={260}
           />
         </Celda>
         <Celda className="min-w-0 flex-1">
@@ -358,12 +425,15 @@ export function FilaGuardada({
   puedeAnular,
   alServir,
   alAnular,
+  alCambiarLlevar,
 }: {
   item: ItemPedido
   indice: IndiceCarta
   puedeAnular: boolean
   alServir: () => void
   alAnular: () => void
+  /** Pasar esta línea a para llevar, o de vuelta a la mesa. */
+  alCambiarLlevar?: () => void
 }) {
   const anulado = item.estado === 'ANULADO'
   const producto = item.productoId ? indice.productos.get(item.productoId) : undefined
@@ -372,6 +442,9 @@ export function FilaGuardada({
   const estado = ESTADO_FILA[item.estado]
   const acciones = [
     ...(item.estado === 'LISTO' || item.estado === 'PENDIENTE' ? [{ etiqueta: 'Marcar como servido', icono: mdiCheck, alElegir: alServir }] : []),
+    ...(alCambiarLlevar
+      ? [{ etiqueta: item.paraLlevar ? 'Cambiar a mesa' : 'Cambiar a para llevar', icono: item.paraLlevar ? mdiTableFurniture : mdiShopping, alElegir: alCambiarLlevar }]
+      : []),
     ...(!anulado && puedeAnular ? [{ etiqueta: 'Anular esta fila', icono: mdiCancel, peligro: true, alElegir: alAnular }] : []),
   ]
   const texto = anulado ? 'text-tinta-3 line-through decoration-tinta-3/60' : ''

@@ -13,6 +13,31 @@ import { Icono } from './icono'
 
 export const esCelular = () => typeof window !== 'undefined' && window.innerWidth < 640
 
+/**
+ * Lo que tapa el teclado del celular. Chrome de Android (y otros) abre el
+ * teclado encima de la página sin achicarla, y lo que va pegado abajo queda
+ * debajo de las teclas: con esto la hoja se sube y se ajusta al hueco que queda.
+ */
+export function useTeclado(activo = true) {
+  const [hueco, setHueco] = useState<{ abajo: number; alto: number } | null>(null)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!activo || !vv) return
+    const medir = () => {
+      const abajo = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))
+      setHueco(abajo > 40 ? { abajo, alto: Math.round(vv.height) } : null)
+    }
+    medir()
+    vv.addEventListener('resize', medir)
+    vv.addEventListener('scroll', medir)
+    return () => {
+      vv.removeEventListener('resize', medir)
+      vv.removeEventListener('scroll', medir)
+    }
+  }, [activo])
+  return hueco
+}
+
 interface Posicion {
   left: number
   top?: number
@@ -43,6 +68,7 @@ export function Flotante({
   ancho = 0,
   children,
   pie,
+  alto = false,
 }: {
   abierto: boolean
   alCerrar: () => void
@@ -51,9 +77,12 @@ export function Flotante({
   ancho?: number
   children: ReactNode
   pie?: ReactNode
+  /** En el celular, la hoja de alto fijo (la que tiene buscador): no salta mientras se filtra. */
+  alto?: boolean
 }) {
   const [pos, setPos] = useState<Posicion | null>(null)
   const [celular, setCelular] = useState(esCelular)
+  const teclado = useTeclado(abierto && celular)
   const caja = useRef<HTMLDivElement>(null)
   const cerrar = useRef(alCerrar)
   cerrar.current = alCerrar
@@ -121,7 +150,9 @@ export function Flotante({
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'tween', duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-              className="absolute inset-x-0 bottom-0 flex max-h-[80dvh] flex-col bg-hoja pb-[env(safe-area-inset-bottom)]"
+              // Con el teclado abierto la hoja se apoya encima de él y ocupa lo que queda de pantalla.
+              style={teclado ? { bottom: teclado.abajo, height: teclado.alto - 8, maxHeight: 'none' } : undefined}
+              className={`absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col bg-hoja ${teclado ? '' : 'pb-[env(safe-area-inset-bottom)]'} ${alto ? 'h-[85dvh]' : ''}`}
             >
               <div className="flex h-12 shrink-0 items-center justify-between bg-verde-3 pr-1 pl-4 text-white">
                 <span className="truncate text-[15px] font-medium">{titulo}</span>

@@ -133,6 +133,11 @@ escribir('post', '/pedidos/:id/servir', enMozo, async (req, res) => {
   res.json(await pedidos.servir(sucursalDe(req), id(req.params.id), itemIds))
 })
 
+escribir('post', '/pedidos/:id/para-llevar', enMozo, async (req, res) => {
+  const { paraLlevar, itemIds } = z.object({ paraLlevar: z.boolean(), itemIds: z.array(z.number().int()).optional() }).parse(req.body)
+  res.json(await pedidos.cambiarParaLlevar(sucursalDe(req), id(req.params.id), paraLlevar, itemIds))
+})
+
 escribir('post', '/pedidos/:id/cuenta', enMozo, async (req, res) => {
   res.json(await pedidos.pedirCuenta(sucursalDe(req), id(req.params.id)))
 })
@@ -203,12 +208,13 @@ api.get('/caja/:id/cobros', enCaja, async (req, res) => {
 })
 
 // ─── Cocina ──────────────────────────────────────────────────────────────
-const estacion = (v: unknown) => (v ? z.enum(ESTACIONES).parse(v) : undefined)
+/** Una cocina («BEBIDAS») o varias que una misma pantalla atiende juntas («BEBIDAS,EMOLIENTES»). */
+const estaciones = (v: unknown) => (v ? z.string().transform((s) => s.split(',')).pipe(z.array(z.enum(ESTACIONES)).max(ESTACIONES.length)).parse(v) : undefined)
 
 /** La hoja «Atención al Cliente»: lo pendiente y lo resuelto desde la última «Limpiar». */
 api.get('/cocina', enCocina, async (req, res) => {
   const desde = typeof req.query.desde === 'string' ? req.query.desde : undefined
-  res.json(await cocina.hojaCocina(sucursalDe(req), estacion(req.query.estacion), desde))
+  res.json(await cocina.hojaCocina(sucursalDe(req), estaciones(req.query.estacion), desde))
 })
 
 escribir('post', '/cocina/items/:id', enCocina, async (req, res) => {
@@ -363,14 +369,14 @@ const datosAdicional = z.object({
   nombre: texto(40),
   precio: centimos,
   activo: z.boolean(),
-  estaciones: z.array(z.enum(ESTACIONES)).max(3),
+  estaciones: z.array(z.enum(ESTACIONES)).max(ESTACIONES.length),
   familia: opcional(40),
 })
 
 escribir('post', '/admin/adicionales', soloAdmin, async (req, res) => {
   const d = datosAdicional.pick({ nombre: true, precio: true }).extend({
     codigo: opcional(12).optional(),
-    estaciones: z.array(z.enum(ESTACIONES)).max(3).optional(),
+    estaciones: z.array(z.enum(ESTACIONES)).max(ESTACIONES.length).optional(),
   })
   res.json(await carta.crearAdicional(d.parse(req.body)))
 })
@@ -423,7 +429,7 @@ escribir('patch', '/admin/ajustes', soloAdmin, async (req, res) => {
       subtitulo: z.string().trim().max(60),
       ruc: z.string().trim().max(20),
       pieNota: z.string().trim().max(140),
-      estaciones: z.object({ CARTA: texto(30), SHAWARMAS: texto(30), BEBIDAS: texto(30) }).partial(),
+      estaciones: z.object({ CARTA: texto(30), SHAWARMAS: texto(30), BEBIDAS: texto(30), EMOLIENTES: texto(30) }).partial(),
       observaciones: z.array(z.string().max(40)).max(40),
       minutosAlerta: z.number().int().min(3).max(120),
     })

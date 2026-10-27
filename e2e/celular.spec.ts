@@ -15,8 +15,14 @@ test('en el celular los desplegables suben desde abajo y la nota se guarda', asy
   await hoja.getByRole('option', { name: /^Emolientes/ }).click()
   await page.getByRole('dialog', { name: 'Emolientes' }).getByRole('option', { name: /^Especial/ }).click()
   await expect(page.getByText('S/ 6.00')).toBeVisible()
+  // El buscador encuentra el plato directo («hawa», no todas las sHAWArmas) y se elige de un toque.
+  await page.getByRole('button', { name: 'Producto' }).last().click()
+  await page.getByRole('dialog', { name: 'Producto' }).getByRole('searchbox').fill('hawa')
+  await expect(page.getByRole('dialog', { name: 'Producto' }).getByRole('option', { name: /^Shawarma Clásica/ })).toHaveCount(0)
+  await page.getByRole('dialog', { name: 'Producto' }).getByRole('option', { name: /^Shawarma Hawaiana/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Producto' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Guardar' }).click()
-  await expect(page.getByText(/Guardado\. Enviado a Cocina 3/)).toBeVisible()
+  await expect(page.getByText(/Guardado\. Enviado a Cocina 3, Cocina 2|Guardado\. Enviado a Cocina 2, Cocina 3/)).toBeVisible()
   // Las pestañas del libro al pie: la de esta mesa ya tiene su franja de color.
   await expect(page.getByRole('link', { name: 'M9' })).toHaveAttribute('aria-current', 'page')
 })

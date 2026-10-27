@@ -7,9 +7,9 @@ const api = conApi()
 
 /**
  * Cocina compartida (temporal): Plaza More y Plaza San Cristóbal están en la
- * misma ciudad y la carta y los shawarmas de las dos salen de la cocina de
- * Plaza More; los emolientes, cada local en la suya. Así queda desde la
- * semilla (el primer deploy) y se deshace desde el panel.
+ * misma ciudad y la carta, los shawarmas y las bebidas de las dos salen de la
+ * cocina de Plaza More; los emolientes, cada local en la suya. Así queda desde
+ * la semilla (el primer deploy) y se deshace desde el panel.
  */
 describe('cocina compartida', () => {
   let todas: Cliente
@@ -43,13 +43,13 @@ describe('cocina compartida', () => {
     }
   })
 
-  it('desde la semilla: San Cristóbal manda carta y shawarmas a la cocina de Plaza More; la 3.ª queda lista pero apagada', async () => {
+  it('desde la semilla: San Cristóbal manda carta, shawarmas y bebidas a la cocina de Plaza More; la 3.ª queda lista pero apagada', async () => {
     const publicos = (await new Cliente(api.url).get<Ajustes>('/ajustes')).datos
     assert.deepEqual(
       publicos.sucursales.map((s) => [s.id, s.nombre, s.cocinaCompartida]),
       [
         [1, 'Plaza More', null],
-        [2, 'Plaza San Cristóbal', { en: 1, estaciones: ['CARTA', 'SHAWARMAS'] }],
+        [2, 'Plaza San Cristóbal', { en: 1, estaciones: ['CARTA', 'SHAWARMAS', 'BEBIDAS'] }],
       ],
     )
     const lista = (await todas.get<{ id: number; nombre: string; activa: boolean; mesas: number; cocinaPara: number[] }[]>('/admin/sucursales')).datos
@@ -82,10 +82,10 @@ describe('cocina compartida', () => {
     assert.equal((await entrarCon(3, pinesDe(3).MOZO)).estado, 401)
   })
 
-  it('una sola pantalla para carta y shawarmas, cada comanda con su local; los emolientes, cada local en la suya', async () => {
+  it('una sola pantalla para carta, shawarmas y bebidas, cada comanda con su local; los emolientes, cada local en la suya', async () => {
     const oido1 = await escuchar(cocina1)
     const oido2 = await escuchar(cocina2)
-    const lineas = [linea(c.producto('Shawarma', 'Clásica').id), linea(c.producto('Emoliente', 'Clásico').id)]
+    const lineas = [linea(c.producto('Shawarma', 'Clásica').id), linea(c.producto('Emoliente', 'Clásico').id), linea(c.producto('Gaseosa', 'Personal').id)]
     // La misma M14 en los dos locales: por eso cada comanda dice de dónde es.
     const r2 = await mozo2.post<Pedido>(`/mesas/${await mesa(mozo2, 'M14')}/enviar`, { cliente: 'Rocío', lineas })
     const r1 = await mozo1.post<Pedido>(`/mesas/${await mesa(mozo1, 'M14')}/enviar`, { cliente: 'Jhon', lineas })
@@ -95,28 +95,33 @@ describe('cocina compartida', () => {
     nota1 = r1.datos
     assert.deepEqual([nota1.sucursalId, nota2.sucursalId], [1, 2])
 
-    // Plaza More: los shawarmas de las dos, con su local; sus emolientes, solo los suyos.
+    // Plaza More: los shawarmas y las bebidas de las dos, con su local; sus emolientes, solo los suyos.
     const shawarmas = await hoja(cocina1, '?estacion=SHAWARMAS')
     assert.equal(shawarmas.find((x) => x.pedidoId === nota2.id)?.sucursalId, 2)
     assert.equal(shawarmas.find((x) => x.pedidoId === nota1.id)?.sucursalId, 1)
-    assert.ok(!(await hoja(cocina1, '?estacion=BEBIDAS')).some((x) => x.pedidoId === nota2.id))
-    assert.deepEqual(estacionesDe(await hoja(cocina1), nota2), ['SHAWARMAS'])
-    assert.deepEqual(estacionesDe(await hoja(cocina1), nota1), ['BEBIDAS', 'SHAWARMAS'])
+    assert.equal((await hoja(cocina1, '?estacion=BEBIDAS')).find((x) => x.pedidoId === nota2.id)?.sucursalId, 2)
+    assert.ok(!(await hoja(cocina1, '?estacion=EMOLIENTES')).some((x) => x.pedidoId === nota2.id))
+    assert.deepEqual(estacionesDe(await hoja(cocina1), nota2), ['BEBIDAS', 'SHAWARMAS'])
+    assert.deepEqual(estacionesDe(await hoja(cocina1), nota1), ['BEBIDAS', 'EMOLIENTES', 'SHAWARMAS'])
+    // La barra de Plaza More mira bebidas y emolientes juntos: las bebidas de los dos locales y solo sus emolientes.
+    const barra = await hoja(cocina1, '?estacion=BEBIDAS,EMOLIENTES')
+    assert.deepEqual(estacionesDe(barra, nota1), ['BEBIDAS', 'EMOLIENTES'])
+    assert.deepEqual(estacionesDe(barra, nota2), ['BEBIDAS'])
 
     // San Cristóbal: sus emolientes, no los de Plaza More; la cocina compartida la ve igual (es la misma).
-    const emolientes = await hoja(cocina2, '?estacion=BEBIDAS')
+    const emolientes = await hoja(cocina2, '?estacion=EMOLIENTES')
     assert.ok(emolientes.some((x) => x.pedidoId === nota2.id))
     assert.ok(!emolientes.some((x) => x.pedidoId === nota1.id))
-    assert.deepEqual(estacionesDe(await hoja(cocina2), nota1), ['SHAWARMAS'])
+    assert.deepEqual(estacionesDe(await hoja(cocina2), nota1), ['BEBIDAS', 'SHAWARMAS'])
 
     // El aviso de pedido nuevo suena en la cocina que lo prepara, con el local; el emoliente, solo en la suya.
     const nuevo = await oido1.esperar((x) => x.aviso?.tipo === 'nuevo' && x.aviso.mesa === 'M14 · Plaza San Cristóbal')
-    assert.deepEqual(nuevo.aviso?.tipo === 'nuevo' && nuevo.aviso.estaciones, ['SHAWARMAS'])
+    assert.deepEqual(nuevo.aviso?.tipo === 'nuevo' && [...nuevo.aviso.estaciones].sort(), ['BEBIDAS', 'SHAWARMAS'])
     assert.equal(nuevo.mesas, undefined)
     const propio = await oido2.esperar((x) => x.aviso?.tipo === 'nuevo' && x.aviso.mesa === 'M14')
-    assert.deepEqual(propio.aviso?.tipo === 'nuevo' && [...propio.aviso.estaciones].sort(), ['BEBIDAS', 'SHAWARMAS'])
+    assert.deepEqual(propio.aviso?.tipo === 'nuevo' && [...propio.aviso.estaciones].sort(), ['BEBIDAS', 'EMOLIENTES', 'SHAWARMAS'])
     const deMore = await oido2.esperar((x) => x.aviso?.tipo === 'nuevo' && x.aviso.mesa === 'M14 · Plaza More')
-    assert.deepEqual(deMore.aviso?.tipo === 'nuevo' && deMore.aviso.estaciones, ['SHAWARMAS'])
+    assert.deepEqual(deMore.aviso?.tipo === 'nuevo' && [...deMore.aviso.estaciones].sort(), ['BEBIDAS', 'SHAWARMAS'])
     oido1.cerrar()
     oido2.cerrar()
   })
@@ -125,10 +130,10 @@ describe('cocina compartida', () => {
     const salon1 = await escuchar(mozo1)
     const salon2 = await escuchar(mozo2)
     const shawarma = nota2.items.find((i) => i.estacion === 'SHAWARMAS')!
-    const emoliente = nota2.items.find((i) => i.estacion === 'BEBIDAS')!
+    const emoliente = nota2.items.find((i) => i.estacion === 'EMOLIENTES')!
 
     assert.equal((await cocina1.post(`/cocina/items/${emoliente.id}`, { listo: true })).estado, 404)
-    assert.equal((await cocina1.post('/cocina/comandas', { pedidoId: nota2.id, ronda: 1, estacion: 'BEBIDAS', listo: true })).estado, 404)
+    assert.equal((await cocina1.post('/cocina/comandas', { pedidoId: nota2.id, ronda: 1, estacion: 'EMOLIENTES', listo: true })).estado, 404)
     assert.equal((await cocina1.post(`/cocina/items/${shawarma.id}`, { listo: true })).estado, 200)
     const listo = await salon2.esperar((x) => x.aviso?.tipo === 'listo')
     assert.deepEqual(listo.aviso, { tipo: 'listo', mesa: 'M14', estacion: 'SHAWARMAS', en: 'Plaza More' })
@@ -136,8 +141,8 @@ describe('cocina compartida', () => {
 
     // El emoliente lo marca San Cristóbal: se recoge ahí mismo.
     salon2.olvidar()
-    assert.equal((await cocina2.post('/cocina/comandas', { pedidoId: nota2.id, ronda: 1, estacion: 'BEBIDAS', listo: true })).estado, 200)
-    assert.deepEqual((await salon2.esperar((x) => x.aviso?.tipo === 'listo')).aviso, { tipo: 'listo', mesa: 'M14', estacion: 'BEBIDAS' })
+    assert.equal((await cocina2.post('/cocina/comandas', { pedidoId: nota2.id, ronda: 1, estacion: 'EMOLIENTES', listo: true })).estado, 200)
+    assert.deepEqual((await salon2.esperar((x) => x.aviso?.tipo === 'listo')).aviso, { tipo: 'listo', mesa: 'M14', estacion: 'EMOLIENTES' })
 
     // Desde San Cristóbal también se marca lo de Plaza More en la cocina compartida; el aviso va a los mozos de Plaza More.
     assert.equal((await cocina2.post('/cocina/comandas', { pedidoId: nota1.id, ronda: 1, estacion: 'SHAWARMAS', listo: true })).estado, 200)
@@ -179,7 +184,7 @@ describe('cocina compartida', () => {
     assert.equal((await new Cliente(api.url).get<Ajustes>('/ajustes')).datos.sucursales[1].cocinaCompartida, null)
     // Lo de San Cristóbal sale ahora solo en su cocina, y la de Plaza More ya no lo ve ni lo marca.
     assert.ok(!(await hoja(cocina1)).some((x) => x.pedidoId === nota2.id))
-    assert.deepEqual(estacionesDe(await hoja(cocina2), nota2), ['BEBIDAS', 'SHAWARMAS'])
+    assert.deepEqual(estacionesDe(await hoja(cocina2), nota2), ['BEBIDAS', 'EMOLIENTES', 'SHAWARMAS'])
     assert.ok(!(await hoja(cocina2)).some((x) => x.pedidoId === nota1.id))
     assert.equal((await cocina1.post('/cocina/comandas', { pedidoId: nota2.id, ronda: 1, estacion: 'SHAWARMAS', listo: false })).estado, 404)
 
@@ -188,7 +193,7 @@ describe('cocina compartida', () => {
     assert.equal((await compartir(2, 2, ['CARTA'])).estado, 400)
     assert.equal((await compartir(2, 1, [])).estado, 400)
     assert.equal((await compartir(2, 3, ['CARTA'])).estado, 409)
-    assert.equal((await compartir(2, 1, ['CARTA', 'SHAWARMAS'])).estado, 200)
+    assert.equal((await compartir(2, 1, ['CARTA', 'SHAWARMAS', 'BEBIDAS'])).estado, 200)
     assert.match((await compartir(1, 2, ['CARTA'])).datos.error, /manda sus pedidos a otra cocina/)
     assert.match((await compartir(3, 2, ['CARTA'])).datos.error, /manda sus pedidos a otra cocina/)
 
@@ -198,6 +203,6 @@ describe('cocina compartida', () => {
     assert.match(apagar.datos.error, /Plaza San Cristóbal usa la cocina de Plaza More/)
 
     // Quedó como la deja la semilla.
-    assert.deepEqual((await new Cliente(api.url).get<Ajustes>('/ajustes')).datos.sucursales[1].cocinaCompartida, { en: 1, estaciones: ['CARTA', 'SHAWARMAS'] })
+    assert.deepEqual((await new Cliente(api.url).get<Ajustes>('/ajustes')).datos.sucursales[1].cocinaCompartida, { en: 1, estaciones: ['CARTA', 'SHAWARMAS', 'BEBIDAS'] })
   })
 })

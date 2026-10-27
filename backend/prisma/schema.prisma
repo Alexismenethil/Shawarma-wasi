@@ -31,11 +31,12 @@ enum Rol {
   ENCARGADO
 }
 
-/// Cocina 1 (carta), cocina 2 (shawarmas), cocina 3 (emolientes y bebidas).
+/// Cocina 1 (carta), cocina 2 (shawarmas), cocina 3 (emolientes), cocina 4 (bebidas).
 enum Estacion {
   CARTA
   SHAWARMAS
   BEBIDAS
+  EMOLIENTES
 }
 
 enum TipoMesa {
@@ -111,7 +112,7 @@ model Sucursal {
   /// Su precio, si se ofrece y si se agotó: lo propio de cada producto aquí.
   productosAjustados ProductoSucursal[]
   /// Temporal: la cocina de otra sucursal le prepara parte de sus pedidos
-  /// (Plaza San Cristóbal manda la carta y los shawarmas a la de Plaza More).
+  /// (Plaza San Cristóbal manda la carta, los shawarmas y las bebidas a la de Plaza More).
   /// Lo de las demás cocinas, como los emolientes, se prepara en la propia. Se
   /// deshace en Administración → Sucursales, sin tocar el código.
   cocinaEnId         Int?
