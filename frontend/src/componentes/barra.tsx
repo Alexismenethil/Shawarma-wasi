@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { mdiAccountCircle, mdiCashRegister, mdiLogout, mdiStorefront, mdiSwapHorizontal, mdiWifi, mdiWifiOff } from '@mdi/js'
 import type { EstadoCaja } from '@wasi/shared'
@@ -92,14 +92,33 @@ export function SucursalActual({ claro = true }: { claro?: boolean }) {
 }
 
 /**
+ * La franja del sistema en el celular (la de la hora y la batería) toma el
+ * color de la barra del área: verde en mozo, azul en caja, turquesa en cocina.
+ * Así la pantalla se ve de una pieza, como una aplicación instalada.
+ */
+function useColorDelSistema(barra: React.RefObject<HTMLElement | null>, color: string) {
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    if (!meta || !barra.current) return
+    const antes = meta.content
+    meta.content = getComputedStyle(barra.current).backgroundColor
+    return () => {
+      meta.content = antes
+    }
+  }, [barra, color])
+}
+
+/**
  * La barra de arriba, como la de una ventana de escritorio: dónde estoy a la
  * izquierda; la sucursal, quién soy, la conexión y «Salir» a la derecha.
  */
 export function Barra({ titulo, color = 'bg-verde-3', izquierda, derecha }: { titulo: ReactNode; color?: string; izquierda?: ReactNode; derecha?: ReactNode }) {
   const sesion = useSesion()
   const salir = useSalir()
+  const barra = useRef<HTMLElement>(null)
+  useColorDelSistema(barra, color)
   return (
-    <header className={`no-imprimir sticky top-0 z-30 text-white ${color}`}>
+    <header ref={barra} className={`no-imprimir sticky top-0 z-30 text-white ${color}`}>
       <div className="flex h-12 items-center gap-2 pr-1 pl-2 sm:pl-3">
         {izquierda ?? (
           <Link to="/" className="flex items-center" aria-label="Inicio">
@@ -116,7 +135,7 @@ export function Barra({ titulo, color = 'bg-verde-3', izquierda, derecha }: { ti
           <Icono d={mdiAccountCircle} className="size-5 text-white/70" />
           {sesion?.usuario.nombre}
         </span>
-        <button onClick={() => void salir()} title="Cerrar sesión" aria-label="Cerrar sesión" className="grid size-11 place-items-center text-white/80 transition-colors hover:bg-white/10 hover:text-white">
+        <button onClick={() => void salir()} title="Cerrar sesión" aria-label="Cerrar sesión" className="grid size-11 place-items-center text-white/80 transition-colors hover:bg-white/10 hover:text-white active:bg-white/15">
           <Icono d={mdiLogout} className="size-5" />
         </button>
       </div>

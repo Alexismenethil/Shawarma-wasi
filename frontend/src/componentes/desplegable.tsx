@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { mdiCheck, mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiCloseCircle, mdiMagnify, mdiMenuDown } from '@mdi/js'
+import { mdiCheck, mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiChevronRight, mdiCloseCircle, mdiMagnify, mdiMenuDown } from '@mdi/js'
 import { Flotante, esCelular } from './flotante'
 import { Icono } from './icono'
 
@@ -20,6 +20,8 @@ export interface Opcion<T> {
   deshabilitada?: boolean
   /** Título de grupo: se pinta antes de la primera opción de cada grupo que quede a la vista. */
   grupo?: string
+  /** Lleva a otra lista (una familia abre sus variantes): se marca con «›». */
+  ir?: boolean
 }
 
 const normal = (s: string) =>
@@ -46,7 +48,8 @@ export function filtrar<T>(opciones: Opcion<T>[], texto: string) {
 
 interface Comun {
   titulo: string
-  vacio?: string
+  /** Lo que se ve con la celda vacía: «Detalle», «Elegir…» o algo más llamativo («+ Agregar producto»). */
+  vacio?: ReactNode
   deshabilitado?: boolean
   /** 'chip' es la celda gris del Excel; 'campo' el campo blanco de un formulario. */
   estilo?: 'chip' | 'campo'
@@ -59,6 +62,8 @@ interface Comun {
   mostrar?: ReactNode
   /** El texto gris del buscador. */
   pistaBusqueda?: string
+  /** En el celular, la flecha «volver» en la cabecera de la hoja. */
+  alVolver?: () => void
 }
 
 function Disparador({
@@ -222,8 +227,15 @@ function Fila<T>({
         {multiple && <Icono d={elegida ? mdiCheckboxMarked : mdiCheckboxBlankOutline} className={`size-5 ${elegida ? 'text-verde-2' : 'text-tinta-3'}`} />}
         {op.icono && <Icono d={op.icono} className={`size-[18px] ${op.deshabilitada ? 'text-tinta-4' : 'text-tinta-2'}`} />}
         <span className="min-w-0 flex-1 truncate">{op.etiqueta}</span>
-        {op.detalle && <span className="shrink-0 pl-3 text-[14px] text-tinta-3 tabular-nums sm:text-[13px]">{op.detalle}</span>}
-        {!multiple && <Icono d={mdiCheck} className={`size-[18px] ${elegida ? 'text-azul' : 'invisible'}`} />}
+        {op.detalle && (
+          <span className={`shrink-0 pl-3 text-[14px] tabular-nums sm:text-[13px] ${op.deshabilitada ? 'text-tinta-4' : 'text-tinta-2'}`}>{op.detalle}</span>
+        )}
+        {!multiple &&
+          (op.ir && !elegida ? (
+            <Icono d={mdiChevronRight} className="size-[18px] text-tinta-3" />
+          ) : (
+            <Icono d={mdiCheck} className={`size-[18px] ${elegida ? 'text-azul' : 'invisible'}`} />
+          ))}
       </button>
     </>
   )
@@ -317,7 +329,7 @@ export function Desplegable<T>({
           ))
         }
       />
-      <Flotante abierto={abierto} alCerrar={() => setAbierto(false)} ancla={boton} titulo={comun.titulo} ancho={comun.ancho} alto={conBuscador}>
+      <Flotante abierto={abierto} alCerrar={() => setAbierto(false)} ancla={boton} titulo={comun.titulo} ancho={comun.ancho} alto={conBuscador} alVolver={comun.alVolver}>
         {conBuscador && <Buscador valor={lista.texto} alCambiar={lista.setTexto} alTeclear={teclas} enfocar={!esCelular()} pista={comun.pistaBusqueda} />}
         <div id={idLista} role="listbox" aria-label={comun.titulo} className="barra-fina min-h-0 flex-1 overflow-y-auto overscroll-contain py-1">
           {limpiar && !lista.texto && (
@@ -493,7 +505,7 @@ export function Menu({
                 setAbierto(false)
                 a.alElegir()
               }}
-              className={`flex min-h-12 w-full items-center gap-3 px-4 text-left text-[15px] hover:bg-gris-100 disabled:opacity-40 sm:min-h-10 sm:text-[14px] ${
+              className={`flex min-h-12 w-full items-center gap-3 px-4 text-left text-[15px] hover:bg-gris-100 active:bg-gris-150 disabled:opacity-40 sm:min-h-10 sm:text-[14px] ${
                 a.peligro ? 'text-rojo' : 'text-tinta'
               }`}
             >

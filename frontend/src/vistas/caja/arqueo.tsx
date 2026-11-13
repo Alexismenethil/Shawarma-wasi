@@ -75,8 +75,8 @@ export function HojaArqueo({ arqueo, compacta = false }: { arqueo: ArqueoCaja; c
             />
             {arqueo.fondoSiguiente !== null && (
               <>
+                {arqueo.contado > arqueo.fondoSiguiente && <Fila etiqueta="Se retiró" valor={soles(arqueo.contado - arqueo.fondoSiguiente)} />}
                 <Fila etiqueta="Queda en caja para el siguiente turno" valor={soles(arqueo.fondoSiguiente)} />
-                <Fila etiqueta="Se retira" valor={soles(arqueo.contado - arqueo.fondoSiguiente)} />
               </>
             )}
           </>
@@ -109,6 +109,7 @@ export function HojaArqueo({ arqueo, compacta = false }: { arqueo: ArqueoCaja; c
             <span className="text-center tabular-nums">{arqueo.medios.reduce((s, m) => s + m.cobros, 0) || ''}</span>
             <span className="px-3 text-right text-[15px] tabular-nums">{soles(arqueo.ventas)}</span>
           </div>
+          <FondoMasVentas arqueo={arqueo} className="border-t-0" />
         </section>
 
         {cerrada && arqueo.conteo && Object.keys(arqueo.conteo).length > 0 && (
@@ -183,7 +184,22 @@ export function DesgloseVentas({ arqueo, titulo = 'Vendido en este turno' }: { a
         </span>
         <b className="text-[16px] tabular-nums">S/ {soles(arqueo.ventas)}</b>
       </div>
+      <FondoMasVentas arqueo={arqueo} />
     </div>
+  )
+}
+
+/**
+ * Al pie, sin llamar la atención: lo vendido con todos los medios de pago más
+ * el fondo con que se abrió. No es lo que hay en el cajón (eso es solo el
+ * efectivo); es la cifra completa del turno.
+ */
+function FondoMasVentas({ arqueo, className = '' }: { arqueo: ArqueoCaja; className?: string }) {
+  return (
+    <p className={`flex items-center justify-between gap-2 border-t border-reja px-3 py-1.5 text-[12.5px] text-tinta-3 ${className}`}>
+      <span>Ventas + fondo inicial (S/ {soles(arqueo.montoInicial)})</span>
+      <span className="font-medium text-tinta-2 tabular-nums">S/ {soles(arqueo.ventas + arqueo.montoInicial)}</span>
+    </p>
   )
 }
 
@@ -223,15 +239,18 @@ export function CierreCaja({
   const [modo, setModo] = useState<'billetes' | 'total'>('total')
   const [conteo, setConteo] = useState<Conteo>({})
   const [totalTexto, setTotalTexto] = useState('')
-  const [fondoTexto, setFondoTexto] = useState((arqueo.montoInicial / 100).toFixed(2))
+  // Lo que se saca del cajón al cerrar. Vacío = no se saca nada: todo lo contado queda en la caja.
+  const [retiroTexto, setRetiroTexto] = useState('')
   const [observacion, setObservacion] = useState('')
   const [cerrando, setCerrando] = useState(false)
 
   const contado = modo === 'billetes' ? sumarConteo(conteo) : aCentimos(totalTexto)
   const hayConteo = modo === 'billetes' ? Object.values(conteo).some((n) => n > 0) : totalTexto.trim() !== ''
   const diferencia = contado - arqueo.esperado
-  const fondo = aCentimos(fondoTexto)
-  const fondoInvalido = hayConteo && fondo > contado
+  const retiro = aCentimos(retiroTexto)
+  const retiroInvalido = hayConteo && retiro > contado
+  // Lo que queda para el siguiente turno: el total contado, menos lo que se retire.
+  const fondo = Math.max(0, contado - retiro)
   const navegar = useNavigate()
   // Las mesas de la lista y, por si alguna no está en ella, lo que cuenta el servidor.
   const sinCobrar = Math.max(pendientes.length, porCobrar.notas)
@@ -242,7 +261,7 @@ export function CierreCaja({
 
   const cerrar = async () => {
     if (!hayConteo) return avisar('Cuenta el dinero del cajón antes de cerrar.', 'error')
-    if (fondoInvalido) return avisar('Lo que queda en caja no puede ser más de lo contado.', 'error')
+    if (retiroInvalido) return avisar('No se puede retirar más de lo contado.', 'error')
     // Primero el aviso: quedan mesas sin cobrar. Lo normal es ir a cobrarlas.
     if (sinCobrar > 0) {
       const que = await elegir({
@@ -279,7 +298,15 @@ export function CierreCaja({
             <b className={`font-medium ${tonoDiferencia(diferencia)}`}>{textoDiferencia(diferencia).toLowerCase()}</b>.
           </p>
           <p>
-            Quedan S/ {soles(fondo)} para el siguiente turno y se retiran <b className="font-medium">S/ {soles(contado - fondo)}</b>.
+            {retiro > 0 ? (
+              <>
+                Se retiran <b className="font-medium">S/ {soles(retiro)}</b> y quedan S/ {soles(fondo)} en la caja para el siguiente turno.
+              </>
+            ) : (
+              <>
+                No se retira dinero: los <b className="font-medium">S/ {soles(fondo)}</b> quedan en la caja para el siguiente turno.
+              </>
+            )}
           </p>
           <DesgloseVentas arqueo={arqueo} />
           {sinCobrar > 0 && (
@@ -368,19 +395,32 @@ export function CierreCaja({
             </div>
           </div>
 
+          {/* Lo normal es que todo el efectivo se quede en la caja: solo se escribe algo si se saca dinero. */}
           <div>
-            <p className="mb-1.5 text-[15px] font-medium sm:text-[14px]">2. ¿Cuánto queda para el siguiente turno?</p>
+            <p className="mb-1.5 text-[15px] font-medium sm:text-[14px]">
+              2. ¿Se retira dinero? <span className="font-normal text-tinta-3">(solo si se saca)</span>
+            </p>
             <div className="flex items-center gap-2">
               <input
-                value={fondoTexto}
-                onChange={(e) => setFondoTexto(e.target.value.replace(/[^\d.,]/g, '').slice(0, 9))}
+                value={retiroTexto}
+                onChange={(e) => setRetiroTexto(e.target.value.replace(/[^\d.,]/g, '').slice(0, 9))}
                 onFocus={(e) => e.target.select()}
                 inputMode="decimal"
-                aria-label="Queda en caja"
-                className={`campo h-12 w-36 text-right text-[19px] font-medium tabular-nums sm:h-10 sm:w-32 sm:text-[16px] ${fondoInvalido ? 'border-rojo' : ''}`}
+                placeholder="0.00"
+                aria-label="Se retira"
+                className={`campo h-12 w-36 text-right text-[19px] font-medium tabular-nums sm:h-10 sm:w-32 sm:text-[16px] ${retiroInvalido ? 'border-rojo' : ''}`}
               />
-              <span className="text-[13.5px] text-tinta-2">
-                Se retira <b className="font-medium text-tinta tabular-nums">S/ {soles(Math.max(0, contado - fondo))}</b>
+              <span className="min-w-0 text-[13.5px] leading-snug text-tinta-2">
+                {retiroInvalido ? (
+                  <span className="font-medium text-rojo">Es más de lo contado</span>
+                ) : (
+                  <>
+                    Queda en caja{' '}
+                    <output aria-label="Queda en caja" className="font-medium whitespace-nowrap text-tinta tabular-nums">
+                      {hayConteo ? `S/ ${soles(fondo)}` : 'todo lo contado'}
+                    </output>
+                  </>
+                )}
               </span>
             </div>
           </div>
@@ -413,7 +453,7 @@ export function CierreCaja({
             </div>
           )}
 
-          <Boton variante="cobrar" icono={mdiCashLock} cargando={cerrando} disabled={!hayConteo || fondoInvalido} onClick={() => void cerrar()} className="h-12 text-[15px]">
+          <Boton variante="cobrar" icono={mdiCashLock} cargando={cerrando} disabled={!hayConteo || retiroInvalido} onClick={() => void cerrar()} className="h-12 text-[15px]">
             Cerrar caja
           </Boton>
         </div>
@@ -454,8 +494,8 @@ export function TicketCierre({ arqueo, sucursal }: { arqueo: ArqueoCaja; sucursa
           <>
             {linea('Contado', soles(arqueo.contado))}
             {linea('Diferencia', textoDiferencia(arqueo.diferencia), true)}
+            {arqueo.fondoSiguiente !== null && arqueo.contado > arqueo.fondoSiguiente && linea('Se retira', soles(arqueo.contado - arqueo.fondoSiguiente))}
             {arqueo.fondoSiguiente !== null && linea('Queda en caja', soles(arqueo.fondoSiguiente))}
-            {arqueo.fondoSiguiente !== null && linea('Se retira', soles(arqueo.contado - arqueo.fondoSiguiente))}
           </>
         )}
       </div>
@@ -467,6 +507,7 @@ export function TicketCierre({ arqueo, sucursal }: { arqueo: ArqueoCaja; sucursa
             <div key={m.metodo}>{linea(`${m.nombre} (${m.cobros})`, soles(m.monto))}</div>
           ))}
         {linea(`TOTAL · ${arqueo.notas} notas`, soles(arqueo.ventas), true)}
+        {linea('Ventas + fondo inicial', soles(arqueo.ventas + arqueo.montoInicial))}
       </div>
       {arqueo.movimientos.length > 0 && (
         <div className="mt-1.5 border-t border-dashed border-black pt-1">

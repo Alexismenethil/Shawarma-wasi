@@ -36,7 +36,7 @@ export function Ventas() {
         </>
       }
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         <Kpi color="rojo" icono={mdiCash} titulo="Ventas del periodo" valor={d ? solesCortos(d.totales.ventas) : '…'} detalle={d && <Delta actual={d.totales.ventas} anterior={d.anterior.ventas} />} />
         <Kpi color="turquesa" icono={mdiReceiptText} titulo="Pedidos" valor={d?.totales.pedidos.toLocaleString('es-PE') ?? '…'} detalle={d && <Delta actual={d.totales.pedidos} anterior={d.anterior.pedidos} />} />
         <Kpi color="verde" icono={mdiScaleBalance} titulo="Ticket promedio" valor={d ? enSoles(d.totales.ticketPromedio) : '…'} detalle={d && <Delta actual={d.totales.ticketPromedio} anterior={d.anterior.ticketPromedio} />} />

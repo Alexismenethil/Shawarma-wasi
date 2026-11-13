@@ -105,7 +105,7 @@ export function PorCobrar({ mesas }: { mesas: MesaResumen[] | null }) {
                     onClick={() => elegir(p.id)}
                     aria-current={activa || undefined}
                     className={`relative grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 border-b border-reja px-4 py-3.5 text-left text-[16px] transition-colors lg:grid-cols-[52px_64px_minmax(0,1fr)_minmax(0,0.8fr)_128px_84px_96px] lg:gap-0 lg:px-0 lg:py-0 lg:text-[14px] ${
-                      activa ? 'bg-azul-suave' : 'hover:bg-gris-50'
+                      activa ? 'bg-azul-suave' : 'hover:bg-gris-50 active:bg-gris-100'
                     }`}
                   >
                     {activa && <span className="absolute inset-y-0 left-0 w-1 bg-azul-oscuro" />}

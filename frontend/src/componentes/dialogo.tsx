@@ -17,6 +17,7 @@ export function Dialogo({
   children,
   botones,
   ancho = 'max-w-[460px]',
+  peligro = false,
 }: {
   abierto: boolean
   titulo: string
@@ -24,6 +25,8 @@ export function Dialogo({
   children: ReactNode
   botones?: ReactNode
   ancho?: string
+  /** Lo que no tiene vuelta (anular, borrar, cerrar con mesas sin cobrar): la barra de título va en rojo. */
+  peligro?: boolean
 }) {
   const caja = useRef<HTMLDivElement>(null)
   // En el celular la ventana sale desde abajo: con el teclado abierto, se sube encima de él.
@@ -64,7 +67,7 @@ export function Dialogo({
             style={teclado ? { maxHeight: teclado.alto - 8 } : undefined}
             className={`sombra-menu relative flex max-h-[92dvh] w-full flex-col border border-reja-2 bg-hoja outline-none ${ancho}`}
           >
-            <div className="flex h-11 shrink-0 items-center justify-between bg-verde-3 pr-1 pl-4 text-white">
+            <div className={`flex h-11 shrink-0 items-center justify-between pr-1 pl-4 text-white ${peligro ? 'bg-rojo-oscuro' : 'bg-verde-3'}`}>
               <span className="truncate text-[15px] font-medium">{titulo}</span>
               <button onClick={alCerrar} aria-label="Cerrar" className="grid size-10 place-items-center text-white/80 hover:bg-white/10 hover:text-white">
                 <Icono d={mdiClose} className="size-5" />
@@ -134,17 +137,22 @@ function responder(valor: unknown) {
 }
 
 export function Confirmaciones() {
-  const p = useSyncExternalStore(
+  const actualAhora = useSyncExternalStore(
     (o) => {
       oyentes.add(o)
       return () => oyentes.delete(o)
     },
     () => actual,
   )
+  // Mientras la ventana se va, sigue mostrando lo último (sin quedarse en blanco ni cambiar de color).
+  const ultimo = useRef<Pedido | null>(null)
+  if (actualAhora) ultimo.current = actualAhora
+  const p = actualAhora ?? ultimo.current
   return (
     <Dialogo
-      abierto={!!p}
+      abierto={!!actualAhora}
       titulo={p?.titulo ?? ''}
+      peligro={p?.peligro}
       alCerrar={() => responder(null)}
       botones={
         <>

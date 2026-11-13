@@ -103,19 +103,27 @@ export function Kpi({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`kpi kpi-${color} flex min-h-[112px] items-center gap-3 px-4 py-3.5`}
+      // En el celular van de a dos por fila y más compactas: las cuatro cifras del día caben en una pantalla.
+      className={`kpi kpi-${color} flex min-h-[100px] items-center gap-2 px-3 py-3 transition-[filter] active:brightness-95 sm:min-h-[112px] sm:gap-3 sm:px-4 sm:py-3.5`}
     >
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13.5px] font-medium text-white/90">{titulo}</p>
-        <p className="mt-1 truncate text-[24px] leading-tight font-bold tabular-nums">{valor}</p>
-        {detalle && <p className="mt-0.5 truncate text-[12.5px] text-white/85">{detalle}</p>}
+        <p className="flex items-center gap-1.5 truncate text-[12.5px] font-medium text-white/90 sm:text-[13.5px]">
+          <Icono d={icono} className="size-4 shrink-0 sm:hidden" />
+          <span className="truncate">{titulo}</span>
+        </p>
+        <p className="mt-1 truncate text-[20px] leading-tight font-bold tabular-nums sm:text-[24px]">{valor}</p>
+        {detalle && <p className="mt-0.5 truncate text-[11.5px] text-white/85 sm:text-[12.5px]">{detalle}</p>}
         {a && (
-          <Link to={a} className="mt-1.5 inline-flex items-center text-[12px] font-medium text-white/90 hover:text-white hover:underline">
+          // Toda la tarjeta lleva al detalle (el enlace se estira sobre ella): con el dedo no hay que atinarle a la letra chica.
+          <Link
+            to={a}
+            className="mt-1.5 inline-flex items-center text-[12px] font-medium text-white/90 after:absolute after:inset-0 after:content-[''] hover:text-white hover:underline"
+          >
             Ver detalle <Icono d={mdiChevronRight} className="size-4" />
           </Link>
         )}
       </div>
-      <span className={`grid size-14 shrink-0 place-items-center rounded-full bg-white shadow-[0_2px_6px_rgb(0_0_0/0.18)] ${tinta}`}>
+      <span className={`hidden size-14 shrink-0 place-items-center rounded-full bg-white shadow-[0_2px_6px_rgb(0_0_0/0.18)] sm:grid ${tinta}`}>
         <Icono d={icono} className="size-7" />
       </span>
     </motion.div>

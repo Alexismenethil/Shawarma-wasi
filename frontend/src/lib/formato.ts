@@ -50,6 +50,22 @@ export function minutosDesde(iso: string, ahora: number) {
   return Math.max(0, Math.floor((ahora - Date.parse(iso)) / 60_000))
 }
 
+/**
+ * Una espera dicha como la diría el mozo: «8 min», «1 h 25 min», «2 d 3 h».
+ * Antes todo iba en minutos y una nota olvidada mostraba «21152 min».
+ */
+export function duracion(minutos: number) {
+  if (minutos < 60) return `${minutos} min`
+  if (minutos < 24 * 60) {
+    const h = Math.floor(minutos / 60)
+    const m = minutos % 60
+    return m ? `${h} h ${m} min` : `${h} h`
+  }
+  const d = Math.floor(minutos / (24 * 60))
+  const h = Math.floor((minutos % (24 * 60)) / 60)
+  return h ? `${d} d ${h} h` : `${d} d`
+}
+
 export function cronometro(iso: string, ahora: number) {
   const s = Math.max(0, Math.floor((ahora - Date.parse(iso)) / 1000))
   const m = Math.floor(s / 60)

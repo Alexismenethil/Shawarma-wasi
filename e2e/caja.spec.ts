@@ -26,10 +26,14 @@ test('caja: un egreso, el arqueo al momento, el cierre contando y la reapertura'
   await page.getByRole('radio', { name: 'Solo el total' }).click()
   await page.getByLabel('Total contado').fill(soles(abierta.esperado - 100))
   await expect(page.getByRole('status').filter({ hasText: 'Falta' })).toContainText('1.00')
-  await page.getByLabel('Queda en caja').fill('0')
+  // Por defecto todo lo contado queda en la caja; solo si se saca dinero se escribe cuánto.
+  await expect(page.getByLabel('Queda en caja')).toHaveText(`S/ ${soles(abierta.esperado - 100)}`)
+  await page.getByLabel('Se retira').fill('5')
+  await expect(page.getByLabel('Queda en caja')).toHaveText(`S/ ${soles(abierta.esperado - 100 - 500)}`)
   await page.getByPlaceholder(/Ej\. Se pagó al proveedor/).fill('Se dio vuelto de más')
-  // El cierre muestra lo vendido por tipo de pago, no solo el total.
+  // El cierre muestra lo vendido por tipo de pago, no solo el total, y al pie las ventas más el fondo.
   await expect(page.getByText('Vendido en este turno')).toBeVisible()
+  await expect(page.getByText(/^Ventas \+ fondo inicial/).first()).toBeVisible()
   await page.getByRole('button', { name: 'Cerrar caja' }).last().click()
   // Si otras pruebas dejaron mesas sin cobrar, primero se avisa.
   const sinCobrar = page.getByRole('dialog', { name: 'Mesas sin cobrar' })

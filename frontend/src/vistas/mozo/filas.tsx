@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { mdiCancel, mdiCheck, mdiClose, mdiDotsVertical, mdiPlusBox, mdiShopping, mdiTableFurniture } from '@mdi/js'
+import { mdiCancel, mdiCheck, mdiClose, mdiDotsVertical, mdiPlus, mdiPlusBox, mdiShopping, mdiTableFurniture } from '@mdi/js'
 import type { Carta, FamiliaCarta, ItemPedido, ProductoCarta } from '@wasi/shared'
 import { adicionalesPara, precioLinea, type IndiceCarta, type LineaBorrador } from '../../lib/borrador'
 import { soles, varianteLegible } from '../../lib/formato'
@@ -91,6 +91,7 @@ function opcionesFamilia(carta: Carta | null): Opcion<ValorProducto>[] {
       etiqueta: f.nombre,
       icono: iconoFamilia(f.icono),
       detalle: String(f.productos.length),
+      ir: true,
     })),
     LIBRE,
   ]
@@ -135,8 +136,11 @@ function DesplegableProducto({
   carta: Carta | null
   familia: FamiliaCarta | null | undefined
   alElegir: (eleccion: ReturnType<typeof leerProducto>) => void
-  vacio?: string
+  vacio?: ReactNode
   deshabilitado?: boolean
+  className?: string
+  abierto?: boolean
+  alAbrir?: (abierto: boolean) => void
 }) {
   const opciones = useMemo(() => opcionesFamilia(carta), [carta])
   const productos = useMemo(() => opcionesProductos(carta), [carta])
@@ -186,6 +190,7 @@ export function FilaBorrador({
   const familia = producto?.familia
   const [otraFamilia, setOtraFamilia] = useState<FamiliaCarta | null>(null)
   const [abrirVariante, setAbrirVariante] = useState(false)
+  const [abrirProducto, setAbrirProducto] = useState(false)
   const familiaVista = otraFamilia ?? familia
   const { base, extra, subtotal } = precioLinea(linea, indice)
   const adicionales = useMemo(() => adicionalesPara(carta, familia), [carta, familia])
@@ -229,6 +234,8 @@ export function FilaBorrador({
               <DesplegableProducto
                 carta={carta}
                 familia={familiaVista}
+                abierto={abrirProducto}
+                alAbrir={setAbrirProducto}
                 alElegir={(e) => {
                   if ('libre' in e) return alLibre()
                   if (e.producto && e.familia) return cambiarProducto(e.producto, e.familia)
@@ -251,6 +258,12 @@ export function FilaBorrador({
                 alCambiar={(id) => {
                   const p = familiaVista?.productos.find((x) => x.id === id)
                   if (p && familiaVista) cambiarProducto(p, familiaVista)
+                }}
+                // «←» en la hoja de variantes: vuelve a la lista de familias para elegir otra.
+                alVolver={() => {
+                  setAbrirVariante(false)
+                  setOtraFamilia(null)
+                  setAbrirProducto(true)
                 }}
                 ancho={240}
               />
@@ -355,6 +368,7 @@ export function FilaNueva({
 }) {
   const [familia, setFamilia] = useState<FamiliaCarta | null>(null)
   const [abrirVariante, setAbrirVariante] = useState(false)
+  const [abrirProducto, setAbrirProducto] = useState(false)
   const vacia = <Celda className="hidden lg:flex" />
   return (
     <div className={`border-b border-reja bg-hoja px-2 py-2 lg:px-0 lg:py-0 ${COLUMNAS}`}>
@@ -366,6 +380,8 @@ export function FilaNueva({
           <DesplegableProducto
             carta={carta}
             familia={familia}
+            abierto={abrirProducto}
+            alAbrir={setAbrirProducto}
             alElegir={(e) => {
               if ('libre' in e) return alLibre()
               if (e.producto) {
@@ -375,11 +391,25 @@ export function FilaNueva({
               setFamilia(e.familia)
               setAbrirVariante(true)
             }}
-            vacio={deshabilitada ? 'Nota pagada' : 'Producto…'}
+            // La fila vacía invita a anotar: «+ Agregar producto» en verde, no un «Producto…» gris.
+            vacio={
+              deshabilitada ? (
+                'Nota pagada'
+              ) : (
+                <span className="flex min-w-0 items-center gap-1 font-medium text-verde-2">
+                  <Icono d={mdiPlus} className="size-[18px] shrink-0" />
+                  {/* En la planilla de la computadora la celda es angosta: ahí basta «Producto…». */}
+                  <span className="truncate lg:hidden">Agregar producto</span>
+                  <span className="hidden truncate lg:inline">Producto…</span>
+                </span>
+              )
+            }
             deshabilitado={deshabilitada || !carta}
+            className={deshabilitada ? '' : 'max-lg:h-10 max-lg:text-[15px]'}
           />
         </Celda>
-        <Celda className="min-w-0 flex-1">
+        {/* En el celular la variante aparece recién al elegir la familia: así la fila vacía es un solo botón ancho. */}
+        <Celda className={`min-w-0 flex-1 ${familia ? '' : 'max-lg:hidden'}`}>
           <Desplegable
             titulo={familia?.nombre ?? 'Variante'}
             valor={null}
@@ -393,6 +423,12 @@ export function FilaNueva({
               if (p) alElegir(p)
               setFamilia(null)
             }}
+            alVolver={() => {
+              setAbrirVariante(false)
+              setFamilia(null)
+              setAbrirProducto(true)
+            }}
+            className="max-lg:h-10 max-lg:text-[15px]"
             ancho={240}
           />
         </Celda>

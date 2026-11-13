@@ -176,63 +176,91 @@ input[type='number'] {
       box-shadow 0.12s;
     user-select: none;
   }
+  /* Al tocarlo se hunde un poco: en el celular no hay «hover» que avise que se tocó. */
   .boton:active:not(:disabled) {
-    box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.18);
+    box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.22);
+    filter: brightness(0.93);
   }
-  .boton:disabled {
-    opacity: 0.45;
+  /*
+   * Desactivado: gris y plano, como un botón deshabilitado de un programa de
+   * escritorio. Antes se aclaraba el color y el botón se veía desteñido (un
+   * «Limpiar» beige que no se sabía si estaba apagado o roto).
+   */
+  .boton:disabled:not([aria-busy='true']) {
+    background: var(--color-gris-150);
+    color: var(--color-tinta-3);
+    border-color: var(--color-reja);
+    box-shadow: none;
+  }
+  /* Trabajando («Guardando…»): conserva su color, con la rueda girando. */
+  .boton[aria-busy='true'] {
+    cursor: progress;
   }
   .boton-guardar {
     background: var(--color-verde-boton);
     color: #fff;
   }
-  .boton-guardar:hover:not(:disabled) {
-    background: #357d15;
-  }
   .boton-limpiar {
     background: var(--color-oliva);
     color: #fff;
-  }
-  .boton-limpiar:hover:not(:disabled) {
-    background: #765901;
   }
   .boton-oscuro {
     background: var(--color-verde-3);
     color: #fff;
   }
-  .boton-oscuro:hover:not(:disabled) {
-    background: #1d3a0e;
-  }
   .boton-cobrar {
     background: var(--color-azul-oscuro);
     color: #fff;
-  }
-  .boton-cobrar:hover:not(:disabled) {
-    background: #15356a;
   }
   .boton-peligro {
     background: var(--color-rojo);
     color: #fff;
   }
-  .boton-peligro:hover:not(:disabled) {
-    background: #ad0000;
-  }
+  /* El blanco lleva un borde más marcado y una sombrita al pie: se lee como botón, no como un recuadro. */
   .boton-claro {
     background: #fff;
     color: var(--color-tinta);
-    border-color: var(--color-reja-2);
-  }
-  .boton-claro:hover:not(:disabled) {
-    background: var(--color-gris-50);
-    border-color: var(--color-tinta-4);
+    border-color: #b6bac0;
+    box-shadow: 0 1px 0 rgb(60 64 67 / 0.08);
   }
   .boton-plano {
     background: transparent;
     color: var(--color-tinta-2);
   }
-  .boton-plano:hover:not(:disabled) {
-    background: var(--color-gris-100);
-    color: var(--color-tinta);
+  .boton-claro:disabled:not([aria-busy='true']) {
+    background: var(--color-gris-50);
+    color: var(--color-tinta-4);
+  }
+  .boton-plano:disabled:not([aria-busy='true']) {
+    background: transparent;
+    border-color: transparent;
+    color: var(--color-tinta-4);
+  }
+  /* El «hover» solo con mouse: en la pantalla táctil se quedaba pegado después del toque. */
+  @media (hover: hover) {
+    .boton-guardar:hover:not(:disabled) {
+      background: #357d15;
+    }
+    .boton-limpiar:hover:not(:disabled) {
+      background: #765901;
+    }
+    .boton-oscuro:hover:not(:disabled) {
+      background: #1d3a0e;
+    }
+    .boton-cobrar:hover:not(:disabled) {
+      background: #15356a;
+    }
+    .boton-peligro:hover:not(:disabled) {
+      background: #ad0000;
+    }
+    .boton-claro:hover:not(:disabled) {
+      background: var(--color-gris-50);
+      border-color: var(--color-tinta-3);
+    }
+    .boton-plano:hover:not(:disabled) {
+      background: var(--color-gris-100);
+      color: var(--color-tinta);
+    }
   }
 
   /* ── La hoja: papel blanco con marco ── */
@@ -275,7 +303,8 @@ input[type='number'] {
     text-align: left;
     transition: background-color 0.12s;
   }
-  .chip:hover:not(:disabled) {
+  .chip:hover:not(:disabled),
+  .chip:active:not(:disabled) {
     background: #dfe3e7;
   }
   .chip[aria-expanded='true'] {

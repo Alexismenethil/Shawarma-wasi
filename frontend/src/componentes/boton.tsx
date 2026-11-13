@@ -16,7 +16,7 @@ export function Boton({
   ...resto
 }: { variante?: Variante; icono?: string; children?: ReactNode; cargando?: boolean } & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" {...resto} disabled={resto.disabled || cargando} className={`boton boton-${variante} ${className}`}>
+    <button type="button" {...resto} disabled={resto.disabled || cargando} aria-busy={cargando || undefined} className={`boton boton-${variante} ${className}`}>
       {cargando ? <Rueda /> : icono && <Icono d={icono} className="size-[18px]" />}
       {children}
     </button>
@@ -36,7 +36,7 @@ export function BotonIcono({
       title={titulo}
       aria-label={titulo}
       {...resto}
-      className={`grid size-10 shrink-0 place-items-center text-tinta-2 transition-colors hover:bg-gris-100 hover:text-tinta disabled:opacity-40 ${className}`}
+      className={`grid size-11 shrink-0 place-items-center text-tinta-2 transition-colors hover:bg-gris-100 hover:text-tinta active:bg-gris-150 disabled:opacity-40 sm:size-10 ${className}`}
     >
       <Icono d={icono} className="size-5" />
     </button>

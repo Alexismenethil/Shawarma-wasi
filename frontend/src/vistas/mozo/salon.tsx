@@ -4,7 +4,7 @@ import { motion } from 'motion/react'
 import { mdiArrowRight, mdiBellRing, mdiShopping, mdiTableFurniture } from '@mdi/js'
 import type { MesaResumen, TipoMesa } from '@wasi/shared'
 import { codigoMesa, nombreMesa } from '@wasi/shared'
-import { minutosDesde, soles, useAhora } from '../../lib/formato'
+import { duracion, minutosDesde, soles, useAhora } from '../../lib/formato'
 import { useAjustes } from '../../lib/ajustes'
 import { avisar } from '../../componentes/avisos'
 import { Membrete } from '../../componentes/marca'
@@ -101,7 +101,7 @@ export function Salon() {
               <button
                 key={m.id}
                 onClick={() => navegar(`/mozo/${m.id}`)}
-                className="h-8 border border-rojo-oscuro/30 bg-hoja px-3 text-[13.5px] font-medium text-rojo-oscuro hover:bg-rosa"
+                className="h-9 border border-rojo-oscuro/30 bg-hoja px-3 text-[13.5px] font-medium text-rojo-oscuro hover:bg-rosa active:bg-rosa sm:h-8"
               >
                 {nombreMesa(m)}
               </button>
@@ -163,7 +163,7 @@ function Celda({
       transition={{ delay: Math.min(indice, 20) * 0.012, duration: 0.25 }}
       onClick={alTocar}
       title={`${nombreMesa(mesa)} · ${e.nombre}`}
-      className={`group relative flex h-[84px] flex-col items-stretch justify-between border-r border-b border-reja p-2 text-left transition-[filter] hover:brightness-[0.97] focus-visible:z-10 sm:h-[92px] ${e.fondo}`}
+      className={`group relative flex h-[84px] flex-col items-stretch justify-between border-r border-b border-reja p-2 text-left transition-[filter] hover:brightness-[0.97] active:brightness-[0.9] focus-visible:z-10 sm:h-[92px] ${e.fondo}`}
     >
       <span className="flex items-start justify-between gap-1">
         <span className={`text-[17px] leading-none font-bold sm:text-[18px] ${estado === 'LIBRE' ? 'text-tinta-2' : 'text-tinta'}`}>{codigoMesa(mesa)}</span>
@@ -175,7 +175,7 @@ function Celda({
         </span>
         {p && (
           <span className="mt-0.5 flex flex-wrap items-baseline justify-between gap-x-1 text-[12px] text-tinta-2 tabular-nums">
-            <span className={demorado ? 'font-medium text-rojo' : ''}>{espera !== null ? `${espera} min` : `N° ${p.numero}`}</span>
+            <span className={demorado ? 'font-medium text-rojo' : ''}>{espera !== null ? duracion(espera) : `N° ${p.numero}`}</span>
             <span className="font-medium text-tinta">{soles(p.total)}</span>
           </span>
         )}

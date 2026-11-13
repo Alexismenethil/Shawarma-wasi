@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { mdiClose } from '@mdi/js'
+import { mdiArrowLeft, mdiClose } from '@mdi/js'
 import { Icono } from './icono'
 
 /**
@@ -69,6 +69,7 @@ export function Flotante({
   children,
   pie,
   alto = false,
+  alVolver,
 }: {
   abierto: boolean
   alCerrar: () => void
@@ -79,6 +80,8 @@ export function Flotante({
   pie?: ReactNode
   /** En el celular, la hoja de alto fijo (la que tiene buscador): no salta mientras se filtra. */
   alto?: boolean
+  /** En el celular, una flecha a la izquierda del título para volver al paso anterior (de la variante a la familia). */
+  alVolver?: () => void
 }) {
   const [pos, setPos] = useState<Posicion | null>(null)
   const [celular, setCelular] = useState(esCelular)
@@ -154,9 +157,14 @@ export function Flotante({
               style={teclado ? { bottom: teclado.abajo, height: teclado.alto - 8, maxHeight: 'none' } : undefined}
               className={`absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col bg-hoja ${teclado ? '' : 'pb-[env(safe-area-inset-bottom)]'} ${alto ? 'h-[85dvh]' : ''}`}
             >
-              <div className="flex h-12 shrink-0 items-center justify-between bg-verde-3 pr-1 pl-4 text-white">
-                <span className="truncate text-[15px] font-medium">{titulo}</span>
-                <button onClick={() => cerrar.current()} aria-label="Cerrar" className="grid size-11 place-items-center text-white/85 hover:text-white">
+              <div className={`flex h-12 shrink-0 items-center justify-between bg-verde-3 pr-1 text-white ${alVolver ? 'pl-0' : 'pl-4'}`}>
+                {alVolver && (
+                  <button onClick={alVolver} aria-label="Volver" className="grid size-12 shrink-0 place-items-center text-white/85 hover:text-white active:bg-white/10">
+                    <Icono d={mdiArrowLeft} />
+                  </button>
+                )}
+                <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{titulo}</span>
+                <button onClick={() => cerrar.current()} aria-label="Cerrar" className="grid size-11 place-items-center text-white/85 hover:text-white active:bg-white/10">
                   <Icono d={mdiClose} />
                 </button>
               </div>

@@ -8,7 +8,7 @@ import { useRecurso } from '../../lib/recurso'
 import { useCambios } from '../../lib/tiempo-real'
 import { useAjustes, nombreCocina } from '../../lib/ajustes'
 import { useSucursal } from '../../lib/sucursal'
-import { hora, minutosDesde, useAhora } from '../../lib/formato'
+import { duracion, hora, minutosDesde, useAhora } from '../../lib/formato'
 import { audioDespierto, despertarAudio, estaSilenciado, silenciar, sonarComanda } from '../../lib/sonido'
 import { avisar } from '../../componentes/avisos'
 import { confirmar } from '../../componentes/dialogo'
@@ -53,11 +53,22 @@ function leerLimpiado(v: Vista) {
   }
 }
 
+/**
+ * Los colores del Excel, con menos peso: la fila lleva un tinte suave y la
+ * celda «Estado» el color lleno (menta pendiente, rosa atendido). Lo ya
+ * atendido va en gris, para que lo pendiente salte a la vista.
+ */
 const COLOR_FILA: Record<ItemPedido['estado'], string> = {
-  PENDIENTE: 'bg-menta',
-  LISTO: 'bg-rosa-2',
-  ENTREGADO: 'bg-rosa-2',
-  ANULADO: 'bg-ambar',
+  PENDIENTE: 'bg-menta-suave',
+  LISTO: 'bg-rosa-suave text-tinta-2',
+  ENTREGADO: 'bg-rosa-suave text-tinta-2',
+  ANULADO: 'bg-ambar/40 text-tinta-2',
+}
+const COLOR_ESTADO: Record<ItemPedido['estado'], string> = {
+  PENDIENTE: '!bg-menta !text-verde-3',
+  LISTO: '!bg-rosa-2 !text-rojo-oscuro',
+  ENTREGADO: '!bg-rosa-2/50 !text-tinta-2',
+  ANULADO: '',
 }
 const NOMBRE_ESTADO: Record<ItemPedido['estado'], string> = { PENDIENTE: 'Pendiente', LISTO: 'Atendido', ENTREGADO: 'Atendido', ANULADO: 'Anulado' }
 const FRANJA: Record<Estacion, string> = { CARTA: 'bg-naranja', SHAWARMAS: 'bg-vino', EMOLIENTES: 'bg-turquesa-2', BEBIDAS: 'bg-oliva' }
@@ -70,10 +81,11 @@ const COLUMNAS_LOCAL =
 const TITULOS = ['Nro:', 'Mesa:', 'Cliente:', 'Cant:', 'Producto:', 'Adicional:', 'Detalle:', 'Obs:', 'Hora:', 'Estado:', 'Ad']
 
 /**
- * Cocina compartida: cada local con su color de celda, siempre el mismo, para
- * que el cocinero y el mozo vean de un vistazo a dónde va cada comanda.
+ * Cocina compartida: cada local con su color, siempre el mismo, para que el
+ * cocinero y el mozo vean de un vistazo a dónde va cada comanda. Letra de
+ * color sobre un tinte suave: se distingue sin llenar la hoja de bloques.
  */
-const COLOR_LOCAL = ['bg-azul-oscuro', 'bg-magenta', 'bg-oliva', 'bg-verde-3']
+const COLOR_LOCAL = ['bg-azul-suave text-azul-oscuro', 'bg-[#f6e3ec] text-magenta', 'bg-crema text-ambar-oscuro', 'bg-menta-suave text-verde-3']
 const colorLocal = (id: number) => COLOR_LOCAL[(id - 1) % COLOR_LOCAL.length]
 type Local = { nombre: string; color: string }
 
@@ -250,6 +262,7 @@ export function Cocina() {
       <main className="mx-auto max-w-[1440px] sm:px-4 sm:pt-4">
         <section className="hoja sombra-hoja">
           <Membrete
+            className="max-sm:hidden"
             color="verde"
             derecha={
               <Boton
@@ -257,33 +270,44 @@ export function Cocina() {
                 icono={mdiBroom}
                 onClick={() => void limpiar()}
                 disabled={!resueltas.length}
-                className="h-10 border-2 !border-vino-3 !bg-verde-2 px-3 sm:h-11 sm:px-5 sm:text-[15px]"
+                className="h-10 border-2 px-3 enabled:!border-vino-3 enabled:!bg-verde-2 sm:h-11 sm:px-5 sm:text-[15px]"
               >
                 Limpiar
               </Boton>
             }
           />
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 bg-turquesa px-3 py-2 text-white">
-            <span className="text-[15px]">Atención al Cliente</span>
-            <span className="text-[13px] text-white/80 tabular-nums">
-              {pendientes.length} pendiente{pendientes.length === 1 ? '' : 's'} · {resueltas.length} atendida{resueltas.length === 1 ? '' : 's'}
-              {pendientes.length > 0 && (
-                <>
-                  {' · '}
-                  <span className={masAntigua >= ajustes.minutosAlerta ? 'font-medium text-[#ffd0c8]' : ''}>la más antigua {masAntigua} min</span>
-                </>
-              )}
-            </span>
+          <div className="flex items-center gap-x-5 gap-y-1 bg-turquesa py-1.5 pr-1.5 pl-3 text-white sm:flex-wrap sm:justify-center sm:px-3 sm:py-2">
+            <div className="min-w-0 flex-1 leading-tight sm:flex sm:flex-none sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-5 sm:gap-y-1">
+              <p className="text-[15px] max-sm:font-medium">Atención al Cliente</p>
+              <p className="truncate text-[12.5px] text-white/80 tabular-nums sm:text-[13px]">
+                {pendientes.length} pendiente{pendientes.length === 1 ? '' : 's'} · {resueltas.length} atendida{resueltas.length === 1 ? '' : 's'}
+                {pendientes.length > 0 && (
+                  <>
+                    {' · '}
+                    <span className={masAntigua >= ajustes.minutosAlerta ? 'font-medium text-[#ffd0c8]' : ''}>la más antigua {duracion(masAntigua)}</span>
+                  </>
+                )}
+              </p>
+            </div>
+            {/* En el celular «Limpiar» aparece aquí, y solo cuando hay algo atendido que sacar de la hoja. */}
+            {resueltas.length > 0 && (
+              <button
+                onClick={() => void limpiar()}
+                className="flex h-10 shrink-0 items-center gap-1.5 border border-white/45 px-3 text-[14px] font-medium text-white active:bg-white/15 sm:hidden"
+              >
+                <Icono d={mdiBroom} className="size-[18px]" /> Limpiar
+              </button>
+            )}
           </div>
           {compartida && (
-            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-b border-reja bg-gris-50 px-3 py-1.5 text-[13px] text-tinta-2">
+            <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-reja bg-gris-50 px-3 py-1.5 text-[12.5px] text-tinta-3">
               <span>Cocina compartida:</span>
               {locales.map((s) => (
-                <span key={s.id} className={`px-2 py-0.5 text-[12.5px] font-bold text-white ${colorLocal(s.id)}`}>
+                <span key={s.id} className={`px-1.5 py-0.5 text-[12px] font-bold ${colorLocal(s.id)}`}>
                   {s.nombre}
                 </span>
               ))}
-              <span className="text-tinta-3">cada comanda dice a qué local va</span>
+              <span className="hidden sm:inline">· cada comanda dice a qué local va</span>
             </div>
           )}
 
@@ -297,6 +321,7 @@ export function Cocina() {
 
           {error && !datos && <p className="px-4 py-6 text-rojo">{error}</p>}
 
+          <div className="max-lg:space-y-2 max-lg:bg-fondo max-lg:py-2 max-lg:empty:hidden">
           {comandas.map((c) => (
             <Fragment key={c.clave}>
               <GrupoComanda
@@ -311,16 +336,17 @@ export function Cocina() {
               />
             </Fragment>
           ))}
+          </div>
 
           {datos && comandas.length === 0 && (
-            <div className="bg-menta/40 px-4 py-14 text-center">
+            <div className="bg-menta-suave px-4 py-14 text-center">
               <p className="text-[17px] font-medium text-verde-3">Sin pedidos pendientes</p>
               <p className="mt-1 text-[14px] text-tinta-2">Los pedidos nuevos aparecen aquí con un aviso sonoro.</p>
             </div>
           )}
           {/* Filas vacías al pie, como la hoja del Excel esperando el siguiente pedido */}
           {Array.from({ length: Math.max(2, 6 - filas.length) }, (_, i) => (
-            <div key={i} className="hidden h-10 border-b border-reja bg-menta/35 lg:block" />
+            <div key={i} className="hidden h-10 border-b border-reja bg-hoja lg:block" />
           ))}
         </section>
       </main>
@@ -343,8 +369,8 @@ function ParaDonde({ llevar }: { llevar: boolean }) {
       <Icono d={mdiShopping} className="size-[15px]" />
     </span>
   ) : (
-    <span title="Para mesa" aria-label="Para mesa" className="grid size-6 shrink-0 place-items-center rounded-full bg-black/[0.06] text-tinta-3">
-      <Icono d={mdiSilverwareForkKnife} className="size-[14px]" />
+    <span title="Para mesa" aria-label="Para mesa" className="grid size-6 shrink-0 place-items-center text-tinta-4">
+      <Icono d={mdiSilverwareForkKnife} className="size-[15px]" />
     </span>
   )
 }
@@ -376,20 +402,22 @@ function GrupoComanda({
   const columnas = local ? COLUMNAS_LOCAL : COLUMNAS
 
   return (
-    <div className={`border-t-2 border-tinta-3/60 first-of-type:border-t-0 ${nueva ? 'animate-destello' : ''}`}>
-      {/* Celular: un renglón con el pedido y debajo sus platos */}
-      <div className="flex items-center gap-2 border-b border-reja bg-gris-50 px-3 py-2 text-[14px] lg:hidden">
-        <span className="font-bold tabular-nums">N° {comanda.numero}</span>
-        <span className="font-medium">{codigoMesa(comanda.mesa)}</span>
-        {local && <span className={`shrink-0 px-1.5 py-0.5 text-[12px] leading-tight font-bold text-white ${local.color}`}>{local.nombre}</span>}
-        {comanda.cliente && <span className="truncate text-tinta-2">{comanda.cliente}</span>}
+    <div
+      className={`max-lg:border-y max-lg:border-reja max-lg:bg-hoja lg:border-t lg:border-tinta-4 lg:first-of-type:border-t-0 ${nueva ? 'animate-destello' : ''}`}
+    >
+      {/* Celular: la mesa grande, y lo demás en gris al lado; debajo sus platos */}
+      <div className="flex items-center gap-2 border-b border-reja px-3 py-2 text-[14px] lg:hidden">
+        <span className="shrink-0 text-[18px] leading-none font-bold">{codigoMesa(comanda.mesa)}</span>
+        <span className="shrink-0 text-[13px] text-tinta-3 tabular-nums">N° {comanda.numero}</span>
+        {local && <span className={`min-w-0 truncate px-1.5 py-0.5 text-[12px] leading-tight font-bold ${local.color}`}>{local.nombre}</span>}
+        {comanda.cliente && <span className="min-w-0 truncate text-tinta-2">{comanda.cliente}</span>}
         {agregado && <Ad />}
-        <span className={`ml-auto shrink-0 tabular-nums ${demorada ? 'font-medium text-rojo' : 'text-tinta-2'}`}>
+        <span className={`ml-auto shrink-0 text-[13px] tabular-nums ${demorada ? 'font-medium text-rojo' : 'text-tinta-3'}`}>
           {hora(comanda.enviadoEn)}
-          {pendientes.length > 0 && ` · ${espera} min`}
+          {pendientes.length > 0 && ` · ${duracion(espera)}`}
         </span>
         {pendientes.length > 1 && (
-          <button onClick={alAtenderTodo} title="Marcar todo atendido" aria-label="Marcar todo atendido" className="grid size-9 place-items-center bg-verde-2 text-white">
+          <button onClick={alAtenderTodo} title="Marcar todo atendido" aria-label="Marcar todo atendido" className="grid size-9 shrink-0 place-items-center bg-verde-2 text-white active:brightness-90">
             <Icono d={mdiCheckAll} className="size-5" />
           </button>
         )}
@@ -410,7 +438,7 @@ function GrupoComanda({
             {/* La celda del local se pinta en todas las filas de la comanda, como una celda combinada */}
             {local && (
               <span
-                className={`hidden min-h-11 items-center justify-center border-r border-black/10 px-1.5 text-center text-[13px] leading-tight font-bold text-white lg:flex ${local.color}`}
+                className={`hidden min-h-11 items-center justify-center border-r border-black/10 px-1.5 text-center text-[13px] leading-tight font-bold lg:flex ${local.color}`}
               >
                 {primera && local.nombre}
               </span>
@@ -448,7 +476,7 @@ function GrupoComanda({
               </span>
               <span className={`hidden min-h-11 flex-col items-center justify-center border-r border-black/10 text-[13px] leading-tight tabular-nums lg:flex ${demorada && item.estado === 'PENDIENTE' ? 'font-medium text-rojo' : 'text-tinta-2'}`}>
                 {primera && hora(comanda.enviadoEn)}
-                {primera && pendientes.length > 0 && <span>{espera} min</span>}
+                {primera && pendientes.length > 0 && <span>{duracion(espera)}</span>}
               </span>
               <span className="flex w-[132px] shrink-0 items-center gap-1 lg:min-h-11 lg:w-auto lg:border-r lg:border-black/10 lg:px-1.5">
                 {anulado ? (
@@ -465,7 +493,7 @@ function GrupoComanda({
                     alCambiar={(v) => v !== (item.estado === 'PENDIENTE' ? 'PENDIENTE' : 'LISTO') && alMarcar(item, v === 'LISTO')}
                     mostrar={<span className="truncate font-medium">{NOMBRE_ESTADO[item.estado]}</span>}
                     buscador={false}
-                    className="!h-[34px] !bg-white/70 hover:!bg-white"
+                    className={`!h-[34px] ${COLOR_ESTADO[item.estado]}`}
                     ancho={170}
                   />
                 )}
@@ -489,7 +517,7 @@ function GrupoComanda({
 /** La columna «Ad»: el pedido se agregó después del primer envío. */
 function Ad() {
   return (
-    <span title="Agregado después del primer pedido" className="inline-grid size-6 place-items-center bg-turquesa text-[12px] font-bold text-white">
+    <span title="Agregado después del primer pedido" className="inline-grid size-6 shrink-0 place-items-center bg-[#d0e0e3] text-[12px] font-bold text-turquesa">
       A
     </span>
   )

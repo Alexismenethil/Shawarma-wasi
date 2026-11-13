@@ -1,0 +1,17 @@
+{
+  "name": "Shawarma Wasi",
+  "short_name": "Shawarma Wasi",
+  "description": "Mozo, cocina, caja y administración del local",
+  "lang": "es-PE",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eef0f2",
+  "theme_color": "#274e13",
+  "icons": [
+    { "src": "/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icono-adaptable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

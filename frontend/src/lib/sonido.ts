@@ -74,6 +74,29 @@ function lamina(frecuencia: number, inicio: number, duracion: number, volumen: n
   nota(frecuencia * 4, inicio, 0.18, volumen * 0.1)
 }
 
+/**
+ * Vibrar el celular (en Android; el iPhone no lo permite desde la web). No
+ * depende del audio: aunque el navegador no haya despertado el sonido, el
+ * mozo con el celular en el bolsillo siente el aviso. Si está silenciado, no.
+ */
+export function vibrar(patron: number | number[]) {
+  if (silencio) return
+  try {
+    navigator.vibrate?.(patron)
+  } catch {
+    /* sin vibración */
+  }
+}
+
+/** Un golpecito al tocar una tecla, como el teclado del celular. */
+export function toque() {
+  try {
+    navigator.vibrate?.(8)
+  } catch {
+    /* sin vibración */
+  }
+}
+
 /** El navegador puede dormir el audio si la pantalla estuvo quieta: se despierta antes de sonar. */
 function listo() {
   if (silencio || !ctx) return false
@@ -95,15 +118,12 @@ export function sonarComanda() {
     lamina(1318.5, t + 0.26, 1.2, 0.34)
     lamina(1568, t + 0.39, 1.7, 0.4)
   }
-  try {
-    navigator.vibrate?.([400, 150, 400, 150, 700])
-  } catch {
-    /* sin vibración */
-  }
+  vibrar([400, 150, 400, 150, 700])
 }
 
-/** Algo listo para servir: una campanita corta para el mozo. */
+/** Algo listo para servir: una campanita corta para el mozo, y dos vibraciones en el bolsillo. */
 export function sonarListo() {
+  vibrar([180, 90, 180])
   if (!listo()) return
   lamina(1318.5, 0, 0.6, 0.2)
   lamina(1760, 0.1, 0.9, 0.2)

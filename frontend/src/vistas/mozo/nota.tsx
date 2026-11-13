@@ -85,6 +85,9 @@ function HojaNota({ id }: { id: number }) {
   const total = (pedido?.total ?? 0) + porGuardar
   const cuadre = cuadrarPago(total, pagos, ajustes.medios)
   const hayAlgo = borrador.lineas.length > 0 || (cobraAqui && pagos.some((p) => p.metodo || p.monto))
+  // «Guardar» se enciende cuando hay algo que mandar a cocina o un cobro anotado; si no, queda gris.
+  const hayQueGuardar = borrador.lineas.length > 0 || (cobraAqui && cuadre.usadas.length > 0)
+  const platosSinGuardar = borrador.lineas.reduce((s, l) => s + l.cantidad, 0)
 
   if (mesas && !mesa) {
     return (
@@ -265,7 +268,7 @@ function HojaNota({ id }: { id: number }) {
         <>
           <Icono d={mdiCashRegister} className="size-[18px] text-ambar-oscuro" />
           <span className="flex-1 text-ambar-oscuro">{caja.datos ? 'La caja está cerrada: ábrela para cobrar.' : 'Revisando la caja…'}</span>
-          <Link to="/caja" className="flex h-8 shrink-0 items-center border border-ambar-oscuro/40 bg-hoja px-2.5 text-[13px] font-medium text-ambar-oscuro hover:bg-crema">
+          <Link to="/caja" className="flex h-9 shrink-0 items-center border border-ambar-oscuro/40 bg-hoja px-2.5 text-[13px] font-medium text-ambar-oscuro hover:bg-crema active:bg-crema lg:h-8">
             Ir a caja
           </Link>
         </>
@@ -287,7 +290,7 @@ function HojaNota({ id }: { id: number }) {
             )}
           </span>
           {pedido && pedido.total > 0 && !pedido.cuentaPedidaEn && (
-            <button onClick={pedirCuenta} className="flex h-8 shrink-0 items-center gap-1.5 border border-azul/50 bg-hoja px-2.5 text-[13px] font-medium text-azul hover:bg-azul-suave">
+            <button onClick={pedirCuenta} className="flex h-9 shrink-0 items-center gap-1.5 border border-azul/50 bg-hoja px-2.5 text-[13px] font-medium text-azul hover:bg-azul-suave active:bg-azul-suave lg:h-8">
               <Icono d={mdiReceiptText} className="size-4" />
               Pedir la cuenta
             </button>
@@ -311,7 +314,7 @@ function HojaNota({ id }: { id: number }) {
                   titulo="Más acciones"
                   acciones={masAcciones}
                   disparador={<Icono d={mdiDotsVertical} className="size-5" />}
-                  className="grid h-10 w-8 place-items-center text-tinta-2 hover:bg-gris-100 lg:hidden"
+                  className="grid h-10 w-8 place-items-center text-tinta-2 hover:bg-gris-100 active:bg-gris-150 lg:hidden"
                 />
               </div>
             }
@@ -415,7 +418,7 @@ function HojaNota({ id }: { id: number }) {
               }
               className="boton boton-claro h-11"
             />
-            <Boton variante="guardar" icono={mdiContentSave} onClick={() => void guardar()} cargando={guardando} className="h-11 min-w-44 text-[15px]">
+            <Boton variante="guardar" icono={mdiContentSave} onClick={() => void guardar()} cargando={guardando} disabled={!hayQueGuardar} className="h-11 min-w-44 text-[15px]">
               Guardar
             </Boton>
           </div>
@@ -428,10 +431,17 @@ function HojaNota({ id }: { id: number }) {
           Limpiar
         </Boton>
         <span className="min-w-0 flex-1 text-center leading-tight">
-          <span className="block text-[11.5px] text-tinta-3">Monto total</span>
+          {/* Lo anotado que todavía no llega a cocina se recuerda aquí, junto a «Guardar». */}
+          {platosSinGuardar > 0 ? (
+            <span className="block truncate text-[11.5px] font-medium text-ambar-oscuro">
+              {platosSinGuardar} plato{platosSinGuardar === 1 ? '' : 's'} sin guardar
+            </span>
+          ) : (
+            <span className="block text-[11.5px] text-tinta-3">Monto total</span>
+          )}
           <span className="block text-[17px] font-bold tabular-nums">S/ {soles(total)}</span>
         </span>
-        <Boton variante="guardar" icono={mdiContentSave} onClick={() => void guardar()} cargando={guardando} className="h-11 min-w-[124px]">
+        <Boton variante="guardar" icono={mdiContentSave} onClick={() => void guardar()} cargando={guardando} disabled={!hayQueGuardar} className="h-11 min-w-[124px]">
           Guardar
         </Boton>
       </div>

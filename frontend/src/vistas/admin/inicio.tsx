@@ -59,7 +59,7 @@ export function Inicio() {
       detalle={`${esHoy ? `Hoy, ${fechaLarga(fecha)}` : fechaLarga(fecha)}${donde}`}
       acciones={<CampoFecha etiqueta="Día" valor={fecha} max={hoy} alCambiar={(f) => setParams(f === hoy ? {} : { fecha: f }, { replace: true })} />}
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         <Kpi color="rojo" icono={mdiCash} titulo={esHoy ? 'Ventas de hoy' : 'Ventas del día'} valor={d ? solesCortos(d.totales.ventas) : '…'} detalle={d && `${d.totales.unidades} platos vendidos`} a="/admin/reporte-diario" />
         <Kpi color="turquesa" icono={mdiReceiptText} titulo="Pedidos cobrados" valor={d?.totales.pedidos ?? '…'} detalle="notas cerradas" a="/admin/consolidado" />
         <Kpi color="verde" icono={mdiScaleBalance} titulo="Ticket promedio" valor={d ? enSoles(d.totales.ticketPromedio) : '…'} detalle="por nota" a="/admin/ventas" />
@@ -160,7 +160,8 @@ function PanelSucursales({ sucursales, esHoy }: { sucursales: SucursalDelDia[]; 
         <Tabla
           tono="turquesa"
           columnas={[
-            { titulo: 'Sucursal' },
+            // Con ancho propio: en el celular la tabla se desliza de lado y el nombre no se parte en tres renglones.
+            { titulo: 'Sucursal', ancho: '180px' },
             { titulo: 'Ventas', ancho: '110px' },
             { titulo: 'Pedidos', ancho: '80px' },
             { titulo: 'Ticket prom.', ancho: '104px' },
@@ -180,7 +181,7 @@ function PanelSucursales({ sucursales, esHoy }: { sucursales: SucursalDelDia[]; 
           {sucursales.map((s) => (
             <tr key={s.id} onClick={() => elegirVista(s.id)} className="cursor-pointer" title={`Ver solo ${s.nombre}`}>
               <td>
-                <span className="flex items-center gap-2 font-medium">
+                <span className="flex items-center gap-2 font-medium whitespace-nowrap">
                   <Icono d={mdiStorefront} className="size-[18px] text-verde-2" /> {s.nombre}
                   <Icono d={mdiChevronRight} className="ml-auto size-4 text-tinta-3" />
                 </span>

@@ -97,7 +97,7 @@ export function Cajas() {
         </>
       }
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         <Kpi color="turquesa" icono={mdiCashRegister} titulo="Turnos de caja" valor={datos?.length ?? '…'} detalle={abiertas ? `${abiertas} abierta${abiertas === 1 ? '' : 's'} ahora` : 'todas cerradas'} />
         <Kpi color="verde" icono={mdiCash} titulo="Vendido en esas cajas" valor={datos ? solesCortos(datos.reduce((s, c) => s + c.ventas, 0)) : '…'} detalle="con todos los medios de pago" />
         <Kpi color="rojo" icono={mdiAlertCircle} titulo="Faltó en total" valor={datos ? enSoles(-faltante) : '…'} detalle={`${cerradas.filter((c) => c.diferencia! < 0).length} cierres con faltante`} />

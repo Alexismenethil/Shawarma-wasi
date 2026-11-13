@@ -3,7 +3,7 @@ import { motion, useAnimationControls } from 'motion/react'
 import { mdiBackspaceOutline } from '@mdi/js'
 import { api } from '../lib/api'
 import { guardarSesion, type Sesion } from '../lib/sesion'
-import { despertarAudio } from '../lib/sonido'
+import { despertarAudio, toque, vibrar } from '../lib/sonido'
 import { Icono } from './icono'
 import { Rueda } from './boton'
 
@@ -40,6 +40,7 @@ export function TecladoPin({ area, sucursalId, alEntrar }: { area: 'MOZO' | 'COC
       } catch (e) {
         setError((e as Error).message)
         setPin('')
+        vibrar([70, 50, 70])
         void temblor.start({ x: [0, -10, 8, -6, 4, 0], transition: { duration: 0.4 } })
       } finally {
         setEnviando(false)
@@ -52,6 +53,7 @@ export function TecladoPin({ area, sucursalId, alEntrar }: { area: 'MOZO' | 'COC
     (d: string) => {
       despertarAudio()
       if (enviando || !sucursalId) return
+      toque()
       setError(null)
       const nuevo = (pinRef.current + d).slice(0, LARGO)
       setPin(nuevo)
