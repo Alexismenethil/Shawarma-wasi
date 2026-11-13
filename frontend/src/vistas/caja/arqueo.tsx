@@ -1,13 +1,14 @@
 import { useState, type ReactNode } from 'react'
-import { mdiAlertCircle, mdiCalculator, mdiCashLock, mdiCheckCircle, mdiFormatListChecks } from '@mdi/js'
-import type { ArqueoCaja, Conteo } from '@wasi/shared'
-import { DENOMINACIONES, sumarConteo } from '@wasi/shared'
+import { Link, useNavigate } from 'react-router'
+import { mdiAlertCircle, mdiAlertOctagon, mdiCalculator, mdiCashLock, mdiCheckCircle, mdiFormatListChecks } from '@mdi/js'
+import type { ArqueoCaja, Conteo, MesaResumen } from '@wasi/shared'
+import { DENOMINACIONES, nombreMesa, sumarConteo } from '@wasi/shared'
 import { api } from '../../lib/api'
 import { useAjustes } from '../../lib/ajustes'
 import { fechaHora, hora, soles, textoDiferencia } from '../../lib/formato'
 import { avisar } from '../../componentes/avisos'
 import { Boton } from '../../componentes/boton'
-import { confirmar } from '../../componentes/dialogo'
+import { confirmar, elegir } from '../../componentes/dialogo'
 import { Icono, iconoMedio } from '../../componentes/icono'
 import { aCentimos } from '../mozo/pago'
 import { ConteoEfectivo, denominacion } from './conteo'
@@ -158,10 +159,66 @@ function Bitacora({ arqueo }: { arqueo: ArqueoCaja }) {
 }
 
 /**
+ * Lo cobrado en el turno por tipo de pago (Efectivo, Yape, Plin, tarjeta…):
+ * lo que se cuadra al cerrar, cada medio con su app o su voucher.
+ */
+export function DesgloseVentas({ arqueo, titulo = 'Vendido en este turno' }: { arqueo: ArqueoCaja; titulo?: string }) {
+  const medios = arqueo.medios.filter((m) => m.cobros > 0)
+  return (
+    <div className="border border-reja">
+      <p className="flex h-9 items-center bg-gris-50 px-3 text-[13.5px] font-medium text-tinta-2 sm:text-[13px]">{titulo}</p>
+      {medios.map((m) => (
+        <div key={m.metodo} className="flex min-h-10 items-center gap-2 border-t border-reja px-3 text-[15px] sm:text-[14px]">
+          <Icono d={iconoMedio({ clave: m.metodo, nombre: m.nombre, efectivo: m.efectivo })} className="size-[18px] shrink-0 text-tinta-3" />
+          <span className="min-w-0 flex-1 truncate">
+            {m.nombre} <span className="text-[12.5px] text-tinta-3">({m.cobros})</span>
+          </span>
+          <b className="font-medium tabular-nums">S/ {soles(m.monto)}</b>
+        </div>
+      ))}
+      {medios.length === 0 && <p className="border-t border-reja px-3 py-2.5 text-[14px] text-tinta-3">Todavía no hay cobros.</p>}
+      <div className="flex min-h-11 items-center justify-between border-t border-reja bg-gris-100 px-3 text-[15px] font-medium sm:text-[14px]">
+        <span>
+          Total · {arqueo.notas} nota{arqueo.notas === 1 ? '' : 's'}
+        </span>
+        <b className="text-[16px] tabular-nums">S/ {soles(arqueo.ventas)}</b>
+      </div>
+    </div>
+  )
+}
+
+/** Las mesas que siguen sin cobrar, con lo que deben: lo que se avisa antes de cerrar. */
+function ListaSinCobrar({ pendientes }: { pendientes: MesaResumen[] }) {
+  return (
+    <ul className="divide-y divide-reja border border-reja bg-hoja text-[14.5px] sm:text-[13.5px]">
+      {pendientes.map((m) => (
+        <li key={m.id} className="flex min-h-9 items-center gap-2 px-3">
+          <b className="font-medium">{nombreMesa(m)}</b>
+          {m.pedido?.cliente && <span className="min-w-0 truncate text-tinta-2">· {m.pedido.cliente}</span>}
+          {m.pedido?.mozo && <span className="hidden min-w-0 truncate text-tinta-3 sm:inline">· {m.pedido.mozo}</span>}
+          <span className="ml-auto tabular-nums">S/ {soles(m.pedido?.total ?? 0)}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
  * Cerrar la caja: contar el dinero (billete por billete o el total), ver al
  * instante si cuadra, decidir cuánto queda para el siguiente turno y cerrar.
  */
-export function CierreCaja({ arqueo, porCobrar, alCerrar }: { arqueo: ArqueoCaja; porCobrar: { notas: number; total: number }; alCerrar: () => void }) {
+export function CierreCaja({
+  arqueo,
+  porCobrar,
+  pendientes,
+  alCerrar,
+}: {
+  arqueo: ArqueoCaja
+  porCobrar: { notas: number; total: number }
+  /** Las mesas con cuenta abierta: si hay, se avisa antes de cerrar. */
+  pendientes: MesaResumen[]
+  alCerrar: () => void
+}) {
   // Lo normal es poner el total contado; billete por billete queda a un toque, para quien lo prefiera.
   const [modo, setModo] = useState<'billetes' | 'total'>('total')
   const [conteo, setConteo] = useState<Conteo>({})
@@ -175,10 +232,42 @@ export function CierreCaja({ arqueo, porCobrar, alCerrar }: { arqueo: ArqueoCaja
   const diferencia = contado - arqueo.esperado
   const fondo = aCentimos(fondoTexto)
   const fondoInvalido = hayConteo && fondo > contado
+  const navegar = useNavigate()
+  // Las mesas de la lista y, por si alguna no está en ella, lo que cuenta el servidor.
+  const sinCobrar = Math.max(pendientes.length, porCobrar.notas)
+  const totalSinCobrar = Math.max(
+    pendientes.reduce((s, m) => s + (m.pedido?.total ?? 0), 0),
+    porCobrar.total,
+  )
 
   const cerrar = async () => {
     if (!hayConteo) return avisar('Cuenta el dinero del cajón antes de cerrar.', 'error')
     if (fondoInvalido) return avisar('Lo que queda en caja no puede ser más de lo contado.', 'error')
+    // Primero el aviso: quedan mesas sin cobrar. Lo normal es ir a cobrarlas.
+    if (sinCobrar > 0) {
+      const que = await elegir({
+        titulo: 'Mesas sin cobrar',
+        icono: mdiAlertOctagon,
+        peligro: true,
+        cancelar: 'Volver',
+        mensaje: (
+          <div className="space-y-2">
+            <p>
+              Todavía hay <b className="font-medium">{sinCobrar} cuenta{sinCobrar === 1 ? '' : 's'} sin cobrar</b> por{' '}
+              <b className="font-medium">S/ {soles(totalSinCobrar)}</b>. Ese dinero no entra en este cierre.
+            </p>
+            {pendientes.length > 0 && <ListaSinCobrar pendientes={pendientes} />}
+            <p className="text-tinta-2">Si cierras igual, quedan abiertas y las cobra la siguiente caja.</p>
+          </div>
+        ),
+        opciones: [
+          { etiqueta: 'Ir a cobrar', valor: 'cobrar' as const, variante: 'cobrar' },
+          { etiqueta: 'Cerrar igual', valor: 'cerrar' as const, variante: 'peligro' },
+        ],
+      })
+      if (que === 'cobrar') return void navegar('/caja')
+      if (que !== 'cerrar') return
+    }
     const ok = await confirmar({
       titulo: 'Cerrar caja',
       aceptar: 'Cerrar caja',
@@ -192,9 +281,10 @@ export function CierreCaja({ arqueo, porCobrar, alCerrar }: { arqueo: ArqueoCaja
           <p>
             Quedan S/ {soles(fondo)} para el siguiente turno y se retiran <b className="font-medium">S/ {soles(contado - fondo)}</b>.
           </p>
-          {porCobrar.notas > 0 && (
-            <p className="text-ambar-oscuro">
-              {porCobrar.notas} nota{porCobrar.notas === 1 ? '' : 's'} sin cobrar (S/ {soles(porCobrar.total)}) se cobrarán en la siguiente caja.
+          <DesgloseVentas arqueo={arqueo} />
+          {sinCobrar > 0 && (
+            <p className="font-medium text-rojo">
+              Quedan {sinCobrar} cuenta{sinCobrar === 1 ? '' : 's'} sin cobrar (S/ {soles(totalSinCobrar)}): pasan a la siguiente caja.
             </p>
           )}
         </div>
@@ -256,9 +346,10 @@ export function CierreCaja({ arqueo, porCobrar, alCerrar }: { arqueo: ArqueoCaja
         </div>
 
         <div className="grid content-start gap-4">
+          <DesgloseVentas arqueo={arqueo} />
           <div className="border border-reja">
             <div className="flex h-11 items-center justify-between border-b border-reja px-3 text-[14px]">
-              <span className="text-tinta-2">Debe haber en caja</span>
+              <span className="text-tinta-2">Debe haber en caja (efectivo)</span>
               <b className="text-[16px] font-medium tabular-nums">S/ {soles(arqueo.esperado)}</b>
             </div>
             <div className="flex h-11 items-center justify-between border-b border-reja px-3 text-[14px]">
@@ -308,10 +399,18 @@ export function CierreCaja({ arqueo, porCobrar, alCerrar }: { arqueo: ArqueoCaja
             />
           </label>
 
-          {porCobrar.notas > 0 && (
-            <p className="border border-ambar-oscuro/30 bg-crema px-3 py-2 text-[13px] text-ambar-oscuro">
-              {porCobrar.notas} nota{porCobrar.notas === 1 ? '' : 's'} sin cobrar (S/ {soles(porCobrar.total)}): puedes cerrar igual, las cobra la siguiente caja.
-            </p>
+          {sinCobrar > 0 && (
+            <div role="alert" className="grid gap-2 border border-rojo/40 bg-rosa-suave p-3">
+              <p className="flex items-start gap-2 text-[14.5px] font-medium text-rojo-oscuro sm:text-[14px]">
+                <Icono d={mdiAlertOctagon} className="mt-px size-5 shrink-0" />
+                Hay {sinCobrar} cuenta{sinCobrar === 1 ? '' : 's'} sin cobrar · S/ {soles(totalSinCobrar)}
+              </p>
+              {pendientes.length > 0 && <ListaSinCobrar pendientes={pendientes} />}
+              <p className="text-[13px] text-tinta-2">Cóbralas antes de cerrar. Si cierras igual, pasan a la siguiente caja.</p>
+              <Link to="/caja" className="flex h-11 items-center justify-center border border-rojo/40 bg-hoja text-[14.5px] font-medium text-rojo-oscuro hover:bg-rosa sm:h-9 sm:text-[13.5px]">
+                Ir a cobrar
+              </Link>
+            </div>
           )}
 
           <Boton variante="cobrar" icono={mdiCashLock} cargando={cerrando} disabled={!hayConteo || fondoInvalido} onClick={() => void cerrar()} className="h-12 text-[15px]">

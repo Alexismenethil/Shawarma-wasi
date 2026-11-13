@@ -78,7 +78,7 @@ export function Caja() {
             {hoja === 'cobrar' && <PorCobrar mesas={mesas} />}
             {hoja === 'cobrados' && <Cobrados caja={abierta} />}
             {hoja === 'movimientos' && <Movimientos caja={abierta} />}
-            {hoja === 'arqueo' && <ArqueoYCierre estado={estado} caja={abierta} sucursal={sucursal?.nombre} alCerrar={recargar} />}
+            {hoja === 'arqueo' && <ArqueoYCierre estado={estado} caja={abierta} pendientes={pendientes} sucursal={sucursal?.nombre} alCerrar={recargar} />}
           </>
         )}
       </div>
@@ -101,7 +101,19 @@ export function Caja() {
 }
 
 /** La hoja «Arqueo y cierre»: el arqueo al momento, y el cierre cuando toca. */
-function ArqueoYCierre({ estado, caja, sucursal, alCerrar }: { estado: EstadoCaja; caja: ArqueoCaja; sucursal?: string; alCerrar: () => void }) {
+function ArqueoYCierre({
+  estado,
+  caja,
+  pendientes,
+  sucursal,
+  alCerrar,
+}: {
+  estado: EstadoCaja
+  caja: ArqueoCaja
+  pendientes: MesaResumen[]
+  sucursal?: string
+  alCerrar: () => void
+}) {
   const [params, setParams] = useSearchParams()
   const [cerrando, setCerrando] = useState(params.get('cerrar') === '1')
   return (
@@ -131,6 +143,7 @@ function ArqueoYCierre({ estado, caja, sucursal, alCerrar }: { estado: EstadoCaj
         <CierreCaja
           arqueo={caja}
           porCobrar={estado.porCobrar}
+          pendientes={pendientes}
           alCerrar={() => {
             setParams({ cerrada: '1' }, { replace: true })
             alCerrar()

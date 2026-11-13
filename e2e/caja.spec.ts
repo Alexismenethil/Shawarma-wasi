@@ -28,8 +28,15 @@ test('caja: un egreso, el arqueo al momento, el cierre contando y la reapertura'
   await expect(page.getByRole('status').filter({ hasText: 'Falta' })).toContainText('1.00')
   await page.getByLabel('Queda en caja').fill('0')
   await page.getByPlaceholder(/Ej\. Se pagó al proveedor/).fill('Se dio vuelto de más')
+  // El cierre muestra lo vendido por tipo de pago, no solo el total.
+  await expect(page.getByText('Vendido en este turno')).toBeVisible()
   await page.getByRole('button', { name: 'Cerrar caja' }).last().click()
-  await page.getByRole('dialog', { name: 'Cerrar caja' }).getByRole('button', { name: 'Cerrar caja' }).click()
+  // Si otras pruebas dejaron mesas sin cobrar, primero se avisa.
+  const sinCobrar = page.getByRole('dialog', { name: 'Mesas sin cobrar' })
+  const cierre = page.getByRole('dialog', { name: 'Cerrar caja' })
+  await expect(sinCobrar.or(cierre)).toBeVisible()
+  if (await sinCobrar.isVisible()) await sinCobrar.getByRole('button', { name: 'Cerrar igual' }).click()
+  await cierre.getByRole('button', { name: 'Cerrar caja' }).click()
   await expect(page.getByText('Caja cerrada · Falta S/ 1.00')).toBeVisible()
 
   // Cerrada: se ve el último cierre con su arqueo, y se reabre (fue un error)

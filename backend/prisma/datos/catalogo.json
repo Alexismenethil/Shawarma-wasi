@@ -60,7 +60,7 @@
    "codigo": "SM",
    "familia": "Shawarma",
    "variante": "Mixta",
-   "nombre": "Shawarma Carne y Pollo",
+   "nombre": "Shawarma Mixta",
    "precio": 2000,
    "descripcion": "Carne y pollo"
   },
@@ -308,7 +308,7 @@
    "codigo": "RC",
    "familia": "Asado",
    "variante": "Rachi Mixto",
-   "nombre": "Rachi con Anticuchos",
+   "nombre": "Rachi Mixto",
    "precio": 1500,
    "descripcion": null
   },
@@ -340,7 +340,7 @@
    "codigo": "PP",
    "familia": "Asado",
    "variante": "Brocheta Mixta",
-   "nombre": "Brochetas de Pollo y Anticucho",
+   "nombre": "Brocheta Mixta",
    "precio": 1500,
    "descripcion": null
   },
@@ -556,7 +556,7 @@
    "codigo": "CR",
    "familia": "Conito",
    "variante": "Salchipollo",
-   "nombre": "Conito con Salchipapa y Pollo Nuget",
+   "nombre": "Conito Salchipollo",
    "precio": 1500,
    "descripcion": null
   },

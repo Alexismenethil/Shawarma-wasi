@@ -12,7 +12,7 @@ import { Boton } from '../../componentes/boton'
 import { confirmar } from '../../componentes/dialogo'
 import { Icono } from '../../componentes/icono'
 import { aCentimos } from '../mozo/pago'
-import { CabeceraReporte, HojaArqueo, TicketCierre } from './arqueo'
+import { CabeceraReporte, DesgloseVentas, HojaArqueo, TicketCierre } from './arqueo'
 import { ConteoEfectivo } from './conteo'
 import { Imprimible } from './cobrar'
 
@@ -164,6 +164,10 @@ export function Apertura({ estado, alCambiar }: { estado: EstadoCaja; alCambiar:
                   {textoDiferencia(ultima.diferencia)}
                 </span>
               )}
+            </div>
+            {/* Lo que entró por cada medio (efectivo, Yape, tarjeta…), sin tener que abrir el arqueo. */}
+            <div className="px-4 pb-3">
+              <DesgloseVentas arqueo={ultima} titulo="Vendido por tipo de pago" />
             </div>
             <div className="flex flex-wrap gap-2 border-t border-reja bg-gris-50 px-4 py-3">
               <Boton onClick={() => setVerArqueo(!verArqueo)} className="h-12 text-[15px] sm:h-10 sm:text-[14px]">
